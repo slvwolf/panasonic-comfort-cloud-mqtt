@@ -37,17 +37,19 @@ Example,
 ## Missing Features
 
 ### High Priority
-[ ] Error handling in general
-[ ] Proper entity id generation (currenlty will fail with really wild names)
-[ ] Additonal sensors for inside and outside temperature
-[ ] Proper documentation
-[ ] Docker package
-[ ] Proper shutdown
+
+- [] Error handling in general
+- [] Proper entity id generation (currenlty will fail with really wild names)
+- [] Additonal sensors for inside and outside temperature
+- [] Proper documentation
+- [] Docker package
+- [] Proper shutdown
 
 ## Maybe Someday
-[ ] Fan mode support
-[ ] Support for Eco mode
-[ ] Support for Nano mode
-[ ] Fan speed support
-[ ] Service state events
-[ ] Stop listening to all events in HA topic
+
+- [] Fan mode support
+- [] Support for Eco mode
+- [] Support for Nano mode
+- [] Fan speed support
+- [] Service state events
+- [] Stop listening to all events in HA topic
