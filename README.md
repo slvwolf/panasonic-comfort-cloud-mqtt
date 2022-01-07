@@ -55,3 +55,4 @@ Example install / use,
 - [ ] Fan speed support
 - [ ] Service state events
 - [ ] Stop listening to all events in HA topic
+- [ ] Power usage metrics
