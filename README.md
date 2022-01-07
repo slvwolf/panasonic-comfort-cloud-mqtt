@@ -29,7 +29,7 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
     -t TOPIC, --topic TOPIC
                             MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.
 
-Example,
+Example install / use,
 
     pip3 install .
     python3 run.py -u username@dev.null -P 123password -s 127.0.0.1
