@@ -65,6 +65,7 @@ class Service:
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         print("Connected")
         client.subscribe("{}/#".format(self._topic_prefix))
+        client.subscribe("hass/status")
         self._send_discovery_events()
 
     def _send_discovery_events(self):
@@ -78,8 +79,10 @@ class Service:
         if payload == "online":
             print("Received hass online event, resending configuration..")
             self._send_discovery_events()
-        if payload == "offline":
+        elif payload == "offline":
             print("Received hass offline event")
+        else:
+            print("Unknown status from hass: " + payload)
 
     def on_message(self, client: mqtt.Client, userdata, msg):
         if msg.topic == "hass/status":
