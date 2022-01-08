@@ -14,6 +14,7 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
 - Target temperature controls
 - Power controls for retaining preset modes
 - Inside and outside temperature sensors
+- Respects HA birth and last will events
 
 ## Usage
 
@@ -44,9 +45,14 @@ Example,
 
     python3 run.py -u username@dev.null -P 123password -s 127.0.0.1
 
-## Features Plans
 
-### For 1.x
+## Development
+
+Project has two branches,
+- `main` containing more or less stable version of the project
+- `dev` development branch with most likely breaking changes
+
+### Plans for version 1.0.0
 
 - [X] Additonal sensors for inside and outside temperature
 - [X] Proper entity id generation (currenlty will fail with really wild names)
@@ -56,7 +62,7 @@ Example,
 - [ ] Proper documentation
 - [ ] Docker package
 
-## Maybe in future
+### Beyound 1.x
 
 - [ ] Fan mode support
 - [ ] Support for Eco mode

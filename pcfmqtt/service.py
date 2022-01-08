@@ -9,6 +9,7 @@ class Service:
     """
     Main service
     """
+
     def __init__(self, username: str, password: str, mqtt: str, mqtt_port: int, topic_prefix: str, update_interval: int = 60) -> None:
         self._topic_prefix = topic_prefix
         self._username = username
@@ -29,7 +30,8 @@ class Service:
         print("Reading and populating devices")
         for d in self._session.get_devices():
             device = Device(self._topic_prefix, d)
-            device.update_state(self._session, 30) # Refresh state after 30s so HA can pick it up
+            # Refresh state after 30s so HA can pick it up
+            device.update_state(self._session, 30)
             self._devices[device.get_id()] = device
 
         print("Total {} devices found".format(len(self._devices)))
@@ -40,13 +42,18 @@ class Service:
         self._client.on_message = self.on_message
         self._client.connect(self._mqtt, self._mqtt_port, 60)
         self._client.loop_start()
-
+        last_full_update = time.time()
         try:
             while True:
                 for device in self._devices.values():
                     if device.update_state(self._session, self._update_interval):
-                        state_topic, state_payload = state_event(self._topic_prefix, device)
+                        state_topic, state_payload = state_event(
+                            self._topic_prefix, device)
                         self._client.publish(state_topic, state_payload)
+                # Do one full update once an hour - just in case we have missed HA restart for some reason
+                if last_full_update + 60*60 < time.time():
+                    self._send_discovery_events()
+                    last_full_update = time.time()
                 time.sleep(1)
         except KeyboardInterrupt:
             pass
@@ -58,14 +65,29 @@ class Service:
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         print("Connected")
         client.subscribe("{}/#".format(self._topic_prefix))
+        client.subscribe("homeassistant/status")
+        self._send_discovery_events()
 
+    def _send_discovery_events(self):
         for device in self._devices.values():
             events = discovery_event(self._topic_prefix, device)
             for topic, payload in events:
                 print("Registering to {}".format(topic))
-                client.publish(topic, payload)
+                self._client.publish(topic, payload)
+
+    def _handle_hass_status(self, client: mqtt.Client, payload: str):
+        if payload == "online":
+            print("Received hass online event, resending configuration..")
+            self._send_discovery_events()
+        elif payload == "offline":
+            print("Received hass offline event")
+        else:
+            print("Unknown status from hass: " + payload)
 
     def on_message(self, client: mqtt.Client, userdata, msg):
+        if msg.topic == "homeassistant/status":
+            self._handle_hass_status(client, msg.payload.decode('utf-8'))
+            return
         parts = msg.topic.split("/")
         if parts[0] != self._topic_prefix or len(parts) < 4:
             return
