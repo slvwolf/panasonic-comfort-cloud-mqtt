@@ -8,12 +8,19 @@ _Note: Currently this brige is a one evening prototype project. Main features sh
 Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
 
 ## Features
-- Auto-discovery notification for HA
-- Operating mode support
-- Target temperature support
-- State verification updates
+- Auto registers entities to Home Assistant
+- AC operating mode controls (Non-optimistic)
+- Target temperature controls (Non-optimistic)
+- Inside and outside temperature sensors
 
 ## Usage
+
+### Installing
+
+    git clone https://github.com/slvwolf/panasonic-comfort-cloud-mqtt.git
+    pip3 install .
+
+### Running
 
     usage: run.py [-h] [-u USERNAME] [-P PASSWORD] [-s SERVER] [-p PORT] [-t TOPIC]
 
@@ -31,23 +38,22 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
     -t TOPIC, --topic TOPIC
                             MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.
 
-Example install / use,
+Example,
 
-    pip3 install .
     python3 run.py -u username@dev.null -P 123password -s 127.0.0.1
 
-## Missing Features
+## Features Plans
 
 ### High Priority
 
+- [X] Additonal sensors for inside and outside temperature
+- [X] Proper entity id generation (currenlty will fail with really wild names)
 - [ ] Error handling in general
-- [ ] Proper entity id generation (currenlty will fail with really wild names)
-- [ ] Additonal sensors for inside and outside temperature
 - [ ] Proper documentation
 - [ ] Docker package
 - [ ] Proper shutdown
 
-## Maybe Someday
+## Maybe
 
 - [ ] Fan mode support
 - [ ] Support for Eco mode

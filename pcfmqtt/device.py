@@ -4,12 +4,12 @@ from pcfmqtt.events import state_event
 import pcfmqtt.mappings as mappings
 from pcomfortcloud import constants
 
+
 class Device:
 
     def __init__(self, topic_prefix: str, raw: dict) -> None:
         self._name = raw["name"]
         self._topic_prefix = topic_prefix
-        # TODO: Have proper name mangling herThis will definitely fail with unique names
         self._ha_name = "pcc_" + raw["name"].lower().replace(" ", "_").strip()
         self._group = raw["group"]
         self._model = raw["model"]
@@ -49,13 +49,14 @@ class Device:
         else:
             self._mode = mappings.modes_to_string.get(self._params["mode"])
             if not self._mode:
-                print("Problem when mapping mode - " + str(self._params["mode"]))
+                print("Problem when mapping mode - " +
+                      str(self._params["mode"]))
 
     def get_model(self) -> str:
         return self._model
 
     def get_name(self) -> str:
-        return self._name
+        return self._ha_name + "_ac"
 
     def get_mode(self) -> str:
         return self._mode
@@ -64,7 +65,7 @@ class Device:
         return "climate"
 
     def get_id(self) -> str:
-        return self._ha_name
+        return self.get_name()
 
     def get_internal_id(self) -> str:
         return self._id
@@ -74,7 +75,7 @@ class Device:
 
     def get_temperature(self) -> float:
         return self._params["temperatureInside"]
-    
+
     def get_temperature_outside(self) -> float:
         return self._params["temperatureOutside"]
 
@@ -85,7 +86,8 @@ class Device:
         if command == "mode_cmd":
             literal = mappings.modes_to_literal.get(payload)
             if literal:
-                session.set_device(self._id, mode=literal, power=constants.Power.On)
+                session.set_device(self._id, mode=literal,
+                                   power=constants.Power.On)
             elif payload == "off":
                 session.set_device(self._id, power=constants.Power.Off)
             else:
