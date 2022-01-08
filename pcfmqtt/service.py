@@ -72,7 +72,7 @@ class Service:
             events = discovery_event(self._topic_prefix, device)
             for topic, payload in events:
                 print("Registering to {}".format(topic))
-                self.client.publish(topic, payload)
+                self._client.publish(topic, payload)
 
     def _handle_hass_status(self, client: mqtt.Client, payload: str):
         if payload == "online":
