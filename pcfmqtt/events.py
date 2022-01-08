@@ -60,6 +60,7 @@ def discovery_event(topic_prefix: str, device) -> typing.List[typing.Tuple[str, 
              "temperature_command_topic": "{}/temp_cmd".format(base_topic_path),
              "temperature_state_topic": "{}/state".format(base_topic_path),
              "temperature_state_template": "{{ value_json.target_temperature }}",
+             "power_command_topic": "{}/power_cmd".format(base_topic_path),
              "device": {
                  "model": device.get_model(),
                  "manufacturer": "Panasonic",
@@ -77,7 +78,8 @@ def state_event(topic_prefix: str, device) -> typing.Tuple[str, str]:
     topic = "{}/{}/{}/state".format(topic_prefix,
                                     device.get_component(), device.get_id())
     payload = {
-        "mode": device.get_mode(),
+        "mode": device.get_mode_str(),
+        "power": device.get_power_str(),
         "target_temperature": device.get_target_temperature(),
         "inside_temperature": device.get_temperature(),
         "outside_temperature": device.get_temperature_outside(),

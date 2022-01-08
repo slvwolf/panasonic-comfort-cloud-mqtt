@@ -8,4 +8,10 @@ modes_to_literal = {
     "auto": constants.OperationMode.Auto,
 }
 
+power_to_literal = {
+    "on": constants.Power.On,
+    "off": constants.Power.Off,
+}
+
 modes_to_string = {b: a for a, b in modes_to_literal.items()}
+power_to_string = {b: a for a, b in power_to_literal.items()}

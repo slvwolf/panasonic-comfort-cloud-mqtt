@@ -9,8 +9,7 @@ class Service:
     """
     Main service
     """
-
-    def __init__(self, username: str, password: str, mqtt: str, mqtt_port: int, topic_prefix: str, update_interval: int = 60*60) -> None:
+    def __init__(self, username: str, password: str, mqtt: str, mqtt_port: int, topic_prefix: str, update_interval: int = 60) -> None:
         self._topic_prefix = topic_prefix
         self._username = username
         self._password = password
@@ -30,27 +29,31 @@ class Service:
         print("Reading and populating devices")
         for d in self._session.get_devices():
             device = Device(self._topic_prefix, d)
-            device.update_state(self._session)
+            device.update_state(self._session, 30) # Refresh state after 30s so HA can pick it up
             self._devices[device.get_id()] = device
 
         print("Total {} devices found".format(len(self._devices)))
 
+        print("Starting up MQTT")
         self._client = mqtt.Client()
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
         self._client.connect(self._mqtt, self._mqtt_port, 60)
         self._client.loop_start()
 
-        # Do not rush the first device state info as HA wont register the values right after
-        # discovery event.
-        time.sleep(15)
-        while True:
-            for device in self._devices.values():
-                device.update_state(self._session)
-                state_topic, state_payload = state_event(
-                    self._topic_prefix, device)
-                self._client.publish(state_topic, state_payload)
-            time.sleep(self._update_interval)
+        try:
+            while True:
+                for device in self._devices.values():
+                    if device.update_state(self._session, self._update_interval):
+                        state_topic, state_payload = state_event(self._topic_prefix, device)
+                        self._client.publish(state_topic, state_payload)
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            print("Shutting down")
+            self._client.disconnect()
+            self._session.logout()
 
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         print("Connected")
