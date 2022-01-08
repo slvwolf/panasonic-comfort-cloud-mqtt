@@ -65,7 +65,7 @@ class Device:
         return self._params["mode"]
 
     def get_mode_str(self) -> str:
-        if not self.get_power():
+        if self.get_power() == constants.Power.Off:
             return "off"
         return mappings.modes_to_string.get(self.get_mode())
 
