@@ -65,7 +65,7 @@ class Service:
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         print("Connected")
         client.subscribe("{}/#".format(self._topic_prefix))
-        client.subscribe("homeassistant/status")
+        client.subscribe("hass/status")
         self._send_discovery_events()
 
     def _send_discovery_events(self):
@@ -83,10 +83,6 @@ class Service:
             print("Received hass offline event")
         else:
             print("Unknown status from hass: " + payload)
-
-    def on_message(self, client: mqtt.Client, userdata, msg):
-        if msg.topic == "homeassistant/status":
-            self._handle_hass_status(client, msg.payload.decode('utf-8'))
 
     def on_message(self, client: mqtt.Client, userdata, msg):
         if msg.topic == "hass/status":
