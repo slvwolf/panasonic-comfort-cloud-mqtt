@@ -4,6 +4,7 @@ import time
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
+
 class Service:
     """
     Main service
@@ -17,8 +18,8 @@ class Service:
         self._mqtt_port = mqtt_port
         self._update_interval = update_interval
         self._devices = {}
-        self._client = None # type: mqtt.Client
-        self._session = None # type: pcomfortcloud.Session
+        self._client = None  # type: mqtt.Client
+        self._session = None  # type: pcomfortcloud.Session
 
     def start(self):
         print("Connecting to Panasonic Comfort Cloud..")
@@ -40,13 +41,17 @@ class Service:
         self._client.connect(self._mqtt, self._mqtt_port, 60)
         self._client.loop_start()
 
+        # Do not rush the first device state info as HA wont register the values right after
+        # discovery event.
+        time.sleep(15)
         while True:
-            time.sleep(60)
             for device in self._devices.values():
                 device.update_state(self._session)
-                state_topic, state_payload = state_event(self._topic_prefix, device)
+                state_topic, state_payload = state_event(
+                    self._topic_prefix, device)
                 self._client.publish(state_topic, state_payload)
-        
+            time.sleep(self._update_interval)
+
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         print("Connected")
         client.subscribe("{}/#".format(self._topic_prefix))
@@ -56,8 +61,6 @@ class Service:
             for topic, payload in events:
                 print("Registering to {}".format(topic))
                 client.publish(topic, payload)
-            state_topic, state_payload = state_event(self._topic_prefix, device)
-            client.publish(state_topic, state_payload)
 
     def on_message(self, client: mqtt.Client, userdata, msg):
         parts = msg.topic.split("/")
@@ -68,5 +71,6 @@ class Service:
 
         device = self._devices.get(device_id)
         if device:
-            device.command(client, self._session, command, msg.payload.decode('utf-8'))
+            device.command(client, self._session, command,
+                           msg.payload.decode('utf-8'))
             print("{}:{} >> {}".format(device_id, command, msg.payload))
