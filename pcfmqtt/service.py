@@ -87,6 +87,10 @@ class Service:
     def on_message(self, client: mqtt.Client, userdata, msg):
         if msg.topic == "homeassistant/status":
             self._handle_hass_status(client, msg.payload.decode('utf-8'))
+
+    def on_message(self, client: mqtt.Client, userdata, msg):
+        if msg.topic == "hass/status":
+            self.handle_hass_status(client, msg.payload.decode('utf-8'))
             return
         parts = msg.topic.split("/")
         if parts[0] != self._topic_prefix or len(parts) < 4:
