@@ -11,7 +11,7 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
 - Auto registers entities to Home Assistant
 - Non-optimistic behaviour
 - AC operating mode controls 
-- Target temperature controls )
+- Target temperature controls
 - Power controls for retaining preset modes
 - Inside and outside temperature sensors
 
