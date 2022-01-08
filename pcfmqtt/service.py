@@ -4,10 +4,10 @@ import time
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
-"""
-Main service
-"""
 class Service:
+    """
+    Main service
+    """
 
     def __init__(self, username: str, password: str, mqtt: str, mqtt_port: int, topic_prefix: str, update_interval: int = 60*60) -> None:
         self._topic_prefix = topic_prefix

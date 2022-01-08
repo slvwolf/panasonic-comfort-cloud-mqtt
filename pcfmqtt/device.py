@@ -19,24 +19,24 @@ class Device:
         self._mode = "off"
         print("New device: {} ({})".format(self._name, self._ha_name))
 
-    """
-    Update device state from the cloud
-
-    Example payload for parameters for future reference,
-        'parameters': 
-            {'temperatureInside': 21,
-             'temperatureOutside': -9, 
-             'temperature': 22.0, 
-             'power': <Power.Off: 0>, 
-             'mode': <OperationMode.Auto: 0>, 
-             'fanSpeed': <FanSpeed.Auto: 0>, 
-             'airSwingHorizontal': <AirSwingLR.Auto: -1>, 
-             'airSwingVertical': <AirSwingUD.Auto: -1>, 
-             'eco': <EcoMode.Auto: 0>, 
-             'nanoe': <NanoeMode.Off: 1>
-        }
-    """
     def update_state(self, session: pcomfortcloud.Session):
+        """
+        Update device state from the cloud
+
+        Example payload for parameters for future reference,
+            'parameters': 
+                {'temperatureInside': 21,
+                'temperatureOutside': -9, 
+                'temperature': 22.0, 
+                'power': <Power.Off: 0>, 
+                'mode': <OperationMode.Auto: 0>, 
+                'fanSpeed': <FanSpeed.Auto: 0>, 
+                'airSwingHorizontal': <AirSwingLR.Auto: -1>, 
+                'airSwingVertical': <AirSwingUD.Auto: -1>, 
+                'eco': <EcoMode.Auto: 0>, 
+                'nanoe': <NanoeMode.Off: 1>
+            }
+        """
         print("Reading data for {}/{} ({})".format(self._name, self._ha_name, self._id))
         data = session.get_device(self._id)
         if data["id"] != self._id:
@@ -79,6 +79,9 @@ class Device:
         return self._params["temperatureOutside"]
 
     def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str):
+        """
+        Resolve command coming from HomeAssistant / MQTT
+        """
         if command == "mode_cmd":
             literal = mappings.modes_to_literal.get(payload)
             if literal:

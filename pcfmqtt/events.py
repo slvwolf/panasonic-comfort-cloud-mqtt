@@ -4,19 +4,19 @@ MQTT events.
 import json
 import typing
 
-"""
-Create discovery topic based on device, follows definition from Home Assistant:
-<discovery_prefix>/<component>/[<node_id>/]<object_id>/config
-
-Details: https://www.home-assistant.io/docs/mqtt/discovery/
-"""
 def discovery_topic(topic_prefix: str, device) -> str:
+    """
+    Create discovery topic based on device, follows definition from Home Assistant:
+    <discovery_prefix>/<component>/[<node_id>/]<object_id>/config
+
+    Details: https://www.home-assistant.io/docs/mqtt/discovery/
+    """
     return "{}/{}/{}/config".format(topic_prefix, device.get_component(), device.get_id())
 
-"""
-Create list of discovery events. Tuple consists of (discovery topic, event payload) 
-"""
 def discovery_event(topic_prefix: str, device) -> typing.List[typing.Tuple[str, str]]:
+    """
+    Create list of discovery events. Tuple consists of (discovery topic, event payload) 
+    """
     topics = []
     base_topic_path = "{}/{}/{}".format(topic_prefix, device.get_component(), device.get_id())
     data = {
