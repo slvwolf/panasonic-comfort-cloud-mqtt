@@ -55,8 +55,8 @@ class Service:
                     self._send_discovery_events()
                     last_full_update = time.time()
                 time.sleep(1)
-        except KeyboardInterrupt:
-            pass
+        except KeyboardInterrupt as e:
+            print(e)
         finally:
             print("Shutting down")
             self._client.disconnect()
@@ -72,7 +72,7 @@ class Service:
         for device in self._devices.values():
             events = discovery_event(self._topic_prefix, device)
             for topic, payload in events:
-                print("Registering to {}".format(topic))
+                print("Publishing entity configuration to {}".format(topic))
                 self._client.publish(topic, payload)
 
     def _handle_hass_status(self, client: mqtt.Client, payload: str):
@@ -98,4 +98,4 @@ class Service:
         if device:
             device.command(client, self._session, command,
                            msg.payload.decode('utf-8'))
-            print("{}:{} >> {}".format(device_id, command, msg.payload))
+            #print("{}:{} >> {}".format(device_id, command, msg.payload))
