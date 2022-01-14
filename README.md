@@ -1,7 +1,7 @@
 # Panasonic Comfort Cloud MQTT Bridge
 Home-Assistant MQTT bridge for Panasonic Comfort Cloud. 
 
-_Note: Currently this brige is a one evening prototype project. Main features should work but corner cases will definitely cause problems. Current version has only been tested with model `CS-HZ25UKE`. Let me know if you hit any issues._
+_Note: Current version has only been tested with model `CS-HZ25UKE` so there might be some problems with other models. If._
 
 ![HA](/ha-dashboard.png "HA")
 
@@ -45,6 +45,20 @@ Example,
 
     python3 run.py -u username@dev.null -P 123password -s 127.0.0.1
 
+### Running with Docker
+
+    docker build  . --tag pcc-mqtt
+    docker run -it -d --name pcc-mqtt -e "USERNAME=username@dev.null" -e "PASSWORD=123password" -e "MQTT=127.0.0.1" pcc-mqtt
+
+Available env. variables,
+
+- USERNAME
+- PASSWORD
+- MQTT (default: localhost)
+- MQTT_PORT (default: 1883)
+- TOPIC_PREFIX (default: homeassistant)
+
+At minimum `USERNAME`, `PASSWORD` and `MQTT` needs to be defined
 
 ## Development
 
