@@ -60,19 +60,9 @@ Available env. variables,
 
 At minimum `USERNAME`, `PASSWORD` and `MQTT` needs to be defined
 
-## Development
-
-Project has two branches,
-- `main` containing more or less stable version of the project
-- `dev` development branch with most likely breaking changes
-
 ### Plans for version 1.0.0
 
-- [X] Additonal sensors for inside and outside temperature
-- [X] Proper entity id generation (currenlty will fail with really wild names)
-- [X] Proper shutdown
 - [ ] Logging cleanup
-- [ ] Error handling in general
 - [ ] Proper documentation
 - [ ] Docker package
 
