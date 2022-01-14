@@ -43,20 +43,32 @@ class Service:
         self._client.connect(self._mqtt, self._mqtt_port, 60)
         self._client.loop_start()
         last_full_update = time.time()
+        last_error = False  # Flag to represent whether we encountered error on last update pass
         try:
             while True:
-                for device in self._devices.values():
-                    if device.update_state(self._session, self._update_interval):
-                        state_topic, state_payload = state_event(
-                            self._topic_prefix, device)
-                        self._client.publish(state_topic, state_payload)
-                # Do one full update once an hour - just in case we have missed HA restart for some reason
-                if last_full_update + 60*60 < time.time():
-                    self._send_discovery_events()
-                    last_full_update = time.time()
-                time.sleep(1)
-        except KeyboardInterrupt:
-            pass
+                try:
+                    for device in self._devices.values():
+                        if device.update_state(self._session, self._update_interval):
+                            state_topic, state_payload = state_event(
+                                self._topic_prefix, device)
+                            self._client.publish(state_topic, state_payload)
+                    # Do one full update once an hour - just in case we have missed HA restart for some reason
+                    if last_full_update + 60*60 < time.time():
+                        self._send_discovery_events()
+                        last_full_update = time.time()
+                    time.sleep(1)
+                    last_error = False
+                except pcomfortcloud.session.ResponseError as e:
+                    if last_error:
+                        # Protect Panasonic Comfort Cloud from being spammed with faulty requests, bail out
+                        print(
+                            "Sequence of errors detected, shutting down: %r", e.text)
+                        raise e
+                    print("Error when updating device state: %r", e.text)
+                    last_error = True
+                    time.sleep(60)
+        except KeyboardInterrupt as e:
+            print(e)
         finally:
             print("Shutting down")
             self._client.disconnect()
@@ -72,7 +84,7 @@ class Service:
         for device in self._devices.values():
             events = discovery_event(self._topic_prefix, device)
             for topic, payload in events:
-                print("Registering to {}".format(topic))
+                print("Publishing entity configuration to {}".format(topic))
                 self._client.publish(topic, payload)
 
     def _handle_hass_status(self, client: mqtt.Client, payload: str):
@@ -98,4 +110,4 @@ class Service:
         if device:
             device.command(client, self._session, command,
                            msg.payload.decode('utf-8'))
-            print("{}:{} >> {}".format(device_id, command, msg.payload))
+            #print("{}:{} >> {}".format(device_id, command, msg.payload))

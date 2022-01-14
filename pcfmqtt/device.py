@@ -39,10 +39,11 @@ class Device:
             }
         """
         if self._target_refresh < time():
-            print("Reading data for {}/{} ({})".format(self._name, self._ha_name, self._id))
+            print("Retrieving data for {}/{} ({})".format(self._name, self._ha_name, self._id))
             data = session.get_device(self._id)
             self._params = data["parameters"]
             self._target_refresh = time() + refresh_delay
+            print("Data received for {}/{} ({})".format(self._name, self._ha_name, self._id))
             return True
         return False
 
