@@ -47,7 +47,7 @@ Example,
 
 ### Running with Docker
 
-    docker build  . --tag pcc-mqtt
+    make docker
     docker run -it -d --name pcc-mqtt -e "USERNAME=username@dev.null" -e "PASSWORD=123password" -e "MQTT=127.0.0.1" pcc-mqtt
 
 Available env. variables,

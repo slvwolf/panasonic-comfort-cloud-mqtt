@@ -58,15 +58,18 @@ class Service:
                         last_full_update = time.time()
                     time.sleep(1)
                     last_error = False
-                except pcomfortcloud.session.ResponseError as e:
-                    if last_error:
-                        # Protect Panasonic Comfort Cloud from being spammed with faulty requests, bail out
-                        print(
-                            "Sequence of errors detected, shutting down: %r", e.text)
+                except Exception as e:
+                    if isinstance(e, KeyboardInterrupt):
                         raise e
-                    print("Error when updating device state: %r", e.text)
-                    last_error = True
-                    time.sleep(60)
+                    if last_error:
+                        # Protect Panasonic Comfort Cloud from being spammed with faulty requests. Service seems to
+                        # experience a good amount of Bad Gateway errors so 
+                        print("Sequence of errors detected. Halting requests for 10 minutes: %r" % e)
+                        time.sleep(600)
+                    else:
+                        print("Error when updating device state: %r" % e)
+                        last_error = True
+                        time.sleep(60)
         except KeyboardInterrupt as e:
             print(e)
         finally:
