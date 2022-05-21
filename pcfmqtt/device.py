@@ -154,6 +154,8 @@ class Device:
                 eco=self._desired_state.eco):
             self._state.refresh(self._desired_state)
             self._refresh_soon()
+        else:
+            print("%s: Device update failed" % (self.get_name()))
 
     def _cmd_mode(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
@@ -164,12 +166,14 @@ class Device:
             self.set_mode(literal)
             self.set_power(constants.Power.On)
             self._send_update(session)
+            print("%s: Mode set to %s" % (self.get_name(), payload))
             return True
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
                 self._send_update(session)
+                print("%s: Mode set to %s" % (self.get_name(), payload))
                 return True
             return False
         else:
@@ -185,6 +189,7 @@ class Device:
             return False
         self.set_target_temperature(new_temp)
         self._send_update(session)
+        print("%s: Temperature set to %s" % (self.get_name(), payload))
         return True
 
     def _cmd_power(self, session: pcomfortcloud.Session, payload: str) -> bool:
@@ -199,6 +204,7 @@ class Device:
         if self.get_power() != literal:
             self.set_power(literal)
             self._send_update(session)
+            print("%s: Power set to %s" % (self.get_name(), payload))
             return True
         return False
 
