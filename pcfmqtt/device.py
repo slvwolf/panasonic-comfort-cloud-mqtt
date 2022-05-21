@@ -1,4 +1,3 @@
-import re
 from time import time
 import paho.mqtt.client as mqtt
 import pcomfortcloud
@@ -99,7 +98,6 @@ class Device:
         return self._state.power
 
     def set_power(self, power: constants.Power):
-        self._state.power = power
         self._desired_state.power = power
 
     def get_power_str(self) -> str:
@@ -120,7 +118,6 @@ class Device:
         return mappings.modes_to_string.get(self.get_mode())
 
     def set_mode(self, mode: constants.OperationMode):
-        self._state.mode = mode
         self._desired_state.mode = mode
 
     def get_component(self) -> str:
@@ -136,7 +133,6 @@ class Device:
         return self._id
 
     def set_target_temperature(self, target: float):
-        self._state.temperature = target
         self._desired_state.temperature = target
 
     def get_target_temperature(self) -> float:
@@ -178,20 +174,22 @@ class Device:
     def _cmd_mode(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
         Set operating mode command
+
+        Returns true if something changed and state update needs to be delivered
         """
         literal = mappings.modes_to_literal.get(payload)
         if literal:
             self.set_mode(literal)
             self.set_power(constants.Power.On)
             self._send_update(session)
-            print("%s: Mode set to %s" % (self.get_name(), payload))
+            print("%s: Command ->  Mode set to %s" % (self.get_name(), payload))
             return True
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
                 self._send_update(session)
-                print("%s: Mode set to %s" % (self.get_name(), payload))
+                print("%s: Command -> Mode set to %s" % (self.get_name(), payload))
                 return True
             return False
         else:
@@ -201,18 +199,22 @@ class Device:
     def _cmd_temp(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
         Set target temperature command
+
+        Returns true if something changed and state update needs to be delivered
         """
         new_temp = float(payload)
         if new_temp == self._desired_state.temperature:
             return False
         self.set_target_temperature(new_temp)
         self._send_update(session)
-        print("%s: Temperature set to %s" % (self.get_name(), payload))
+        print("%s: Command ->  Temperature set to %s" % (self.get_name(), payload))
         return True
 
     def _cmd_power(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
         Set power on/off command
+
+        Returns true if something changed and state update needs to be delivered
         """
         literal = mappings.power_to_literal.get(payload.lower())
         if not literal:
@@ -222,13 +224,15 @@ class Device:
         if self.get_power() != literal:
             self.set_power(literal)
             self._send_update(session)
-            print("%s: Power set to %s" % (self.get_name(), payload))
+            print("%s: Command -> Power set to %s" % (self.get_name(), payload))
             return True
         return False
 
     def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str) -> bool:
         """
-        Resolve command coming from HomeAssistant / MQTT. Returns true if something changed and state update needs to be delivered
+        Resolve command coming from HomeAssistant / MQTT. 
+        
+        Returns true if something changed and state update needs to be delivered
         """
         cmd = {"mode_cmd": self._cmd_mode,
                "temp_cmd": self._cmd_temp,

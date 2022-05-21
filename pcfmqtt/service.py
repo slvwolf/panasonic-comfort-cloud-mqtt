@@ -1,6 +1,7 @@
 import pcomfortcloud
 import paho.mqtt.client as mqtt
 import time
+import types
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
@@ -17,9 +18,9 @@ class Service:
         self._mqtt = mqtt
         self._mqtt_port = mqtt_port
         self._update_interval = update_interval
-        self._devices = {}
-        self._client = None  # type: mqtt.Client
-        self._session = None  # type: pcomfortcloud.Session
+        self._devices: types.Dict[str, Device] = {}
+        self._client: mqtt.Client = None
+        self._session: pcomfortcloud.Session = None   
     
     def start(self):
         print("Connecting to Panasonic Comfort Cloud..")
@@ -63,7 +64,8 @@ class Service:
                         raise e
                     if last_error:
                         # Protect Panasonic Comfort Cloud from being spammed with faulty requests. Service seems to
-                        # experience a good amount of Bad Gateway errors so 
+                        # experience a good amount of Bad Gateway errors so better to wait if too many errors are
+                        # encountered.
                         print("Sequence of errors detected. Halting requests for 10 minutes: %r" % e)
                         time.sleep(600)
                     else:
@@ -112,5 +114,6 @@ class Service:
         device = self._devices.get(device_id)
         if device:
             if device.command(client, self._session, command, msg.payload.decode('utf-8')):
+                print("%s: Reported state change, sendin update to HA" % (device.get_name()))
                 state_topic, state_payload = state_event(self._topic_prefix, device)
                 self._client.publish(state_topic, state_payload)
