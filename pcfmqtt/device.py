@@ -136,9 +136,12 @@ class Device:
 
     def _refresh_soon(self):
         """
-        Refresh the state "soonish"
+        Refresh the state "soonish". It sometimes can take some seconds before the state is reflected
+        in the response so wait a while before checking it. Fetching the state too soonish will result
+        in the value being reverted back to the original one in HA eventhough the state is correct in 
+        reality. 
         """
-        self._target_refresh = time() + 10
+        self._target_refresh = time() + 5
 
     def _send_update(self, session: pcomfortcloud.Session):
         if session.set_device(self.get_internal_id(), 
@@ -152,7 +155,7 @@ class Device:
             self._state.refresh(self._desired_state)
             self._refresh_soon()
 
-    def _cmd_mode(self, session: pcomfortcloud.Session, payload: str):
+    def _cmd_mode(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
         Set operating mode command
         """
@@ -161,46 +164,55 @@ class Device:
             self.set_mode(literal)
             self.set_power(constants.Power.On)
             self._send_update(session)
+            return True
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
                 self._send_update(session)
+                return True
+            return False
         else:
             print("Unknown mode command: " + payload)
-            return
+            return False
 
-    def _cmd_temp(self, session: pcomfortcloud.Session, payload: str):
+    def _cmd_temp(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
         Set target temperature command
         """
-        self.set_target_temperature(float(payload))
+        new_temp = float(payload)
+        if new_temp == self._desired_state.temperature:
+            return False
+        self.set_target_temperature(new_temp)
         self._send_update(session)
+        return True
 
-    def _cmd_power(self, session: pcomfortcloud.Session, payload: str):
+    def _cmd_power(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
         Set power on/off command
         """
         literal = mappings.power_to_literal.get(payload.lower())
         if not literal:
             print("Bad power command received: " + payload)
-            return
+            return False
         # Don't turn off the device twice
         if self.get_power() != literal:
             self.set_power(literal)
             self._send_update(session)
+            return True
+        return False
 
-    def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str):
+    def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str) -> bool:
         """
-        Resolve command coming from HomeAssistant / MQTT
+        Resolve command coming from HomeAssistant / MQTT. Returns true if something changed and state update needs to be delivered
         """
         cmd = {"mode_cmd": self._cmd_mode,
                "temp_cmd": self._cmd_temp,
                "power_cmd": self._cmd_power}.get(command)
         if cmd:
-            cmd(session, payload)
+            return cmd(session, payload)
         elif command in ["config", "state"]:
-            pass
+            return False
         else:
             print("Unknown command: " + command)
-            return
+            return False

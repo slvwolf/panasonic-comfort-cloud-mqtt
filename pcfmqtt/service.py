@@ -111,5 +111,6 @@ class Service:
 
         device = self._devices.get(device_id)
         if device:
-            device.command(client, self._session, command,
-                           msg.payload.decode('utf-8'))
+            if device.command(client, self._session, command, msg.payload.decode('utf-8')):
+                state_topic, state_payload = state_event(self._topic_prefix, device)
+                self._client.publish(state_topic, state_payload)
