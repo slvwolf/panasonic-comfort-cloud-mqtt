@@ -1,7 +1,7 @@
 # Panasonic Comfort Cloud MQTT Bridge
 Home-Assistant MQTT bridge for Panasonic Comfort Cloud. 
 
-_Note: Current version has only been tested with model `CS-HZ25UKE` so there might be some problems with other models. If._
+_Note: Current version has only been tested with model `CS-HZ25UKE` so there might be some problems with other models._
 
 ![HA](/ha-dashboard.png "HA")
 
@@ -16,16 +16,11 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
 - Inside and outside temperature sensors
 - Respects HA birth and last will events
 
-## Usage
+## Usage 
 
-### Installing
+### Running Locally
 
-    git clone https://github.com/slvwolf/panasonic-comfort-cloud-mqtt.git
-    pip3 install .
-
-### Running
-
-    usage: run.py [-h] [-u USERNAME] [-P PASSWORD] [-s SERVER] [-p PORT] [-t TOPIC]
+    usage: run.py [-h] [-u USERNAME] [-P PASSWORD] [-s SERVER] [-p PORT] [-t TOPIC] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 
     Home-Assistant MQTT bridge for Panasonic Comfort Cloud
 
@@ -40,13 +35,21 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
     -p PORT, --port PORT  MQTT server port, default 1883. Environment variable `MQTT_PORT`
     -t TOPIC, --topic TOPIC
                             MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.
+    -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                            Logging level to use, defaults to INFO
 
 Example,
 
+    git clone https://github.com/slvwolf/panasonic-comfort-cloud-mqtt.git
+    pip3 install .
     python3 run.py -u username@dev.null -P 123password -s 127.0.0.1
 
 ### Running with Docker
+Currently there are no readily built Docker images but building the image yourself can be done simply by running `make docker`. 
 
+Example of building and running (just change USERNAME, PASSWORD and MQTT variables),
+
+    git clone https://github.com/slvwolf/panasonic-comfort-cloud-mqtt.git
     make docker
     docker run -it -d --name pcc-mqtt -e "USERNAME=username@dev.null" -e "PASSWORD=123password" -e "MQTT=127.0.0.1" pcc-mqtt
 
@@ -57,12 +60,16 @@ Available env. variables,
 - MQTT (default: localhost)
 - MQTT_PORT (default: 1883)
 - TOPIC_PREFIX (default: homeassistant)
+- LOG_LEVEL (default: info)
 
 At minimum `USERNAME`, `PASSWORD` and `MQTT` needs to be defined
 
+To access the logs run,
+
+    docker logs pcc-mqtt
+
 ### Plans for version 1.0.0
 
-- [ ] Logging cleanup
 - [ ] Proper documentation
 - [ ] Docker package
 
@@ -73,5 +80,4 @@ At minimum `USERNAME`, `PASSWORD` and `MQTT` needs to be defined
 - [ ] Support for Nano mode
 - [ ] Fan speed support
 - [ ] Service state events
-- [ ] Stop listening to all events in HA topic
 - [ ] Power usage metrics
