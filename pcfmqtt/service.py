@@ -1,5 +1,5 @@
-import pcomfortcloud
-import paho.mqtt.client as mqtt
+import pcomfortcloud # type: ignore
+import paho.mqtt.client as mqtt # type: ignore
 import time
 import types
 from pcfmqtt.device import Device
@@ -18,8 +18,8 @@ class Service:
         self._mqtt = mqtt
         self._mqtt_port = mqtt_port
         self._update_interval = update_interval
-        self._devices: types.Dict[str, Device] = {}
-        self._client: mqtt.Client = None
+        self._devices: types.Dict[str, Device] = {} # type: ignore
+        self._client: mqtt.Client = None # type: ignore
         self._session: pcomfortcloud.Session = None   
     
     def start(self):
