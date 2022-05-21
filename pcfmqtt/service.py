@@ -20,7 +20,7 @@ class Service:
         self._devices = {}
         self._client = None  # type: mqtt.Client
         self._session = None  # type: pcomfortcloud.Session
-
+    
     def start(self):
         print("Connecting to Panasonic Comfort Cloud..")
         self._session = pcomfortcloud.Session(self._username, self._password)
@@ -113,4 +113,3 @@ class Service:
         if device:
             device.command(client, self._session, command,
                            msg.payload.decode('utf-8'))
-            #print("{}:{} >> {}".format(device_id, command, msg.payload))

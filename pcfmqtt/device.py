@@ -6,6 +6,33 @@ from pcfmqtt.events import state_event
 import pcfmqtt.mappings as mappings
 from pcomfortcloud import constants
 
+class DeviceState:
+
+    def __init__(self, params: dict) -> None:
+        self.temperature = params.get("temperature", 0) # type: float
+        self.power = params.get("power", constants.Power.Off) # type: constants.Power
+        self.temperature_inside = params.get("temperatureInside", 0) # type: int
+        self.temperature_outside = params.get("temperatureOutside", 0) # type: int
+        self.mode = params.get("mode", constants.OperationMode.Auto) # type: constants.OperationMode
+        self.fan_speed = params.get("fanSpeed", constants.FanSpeed.Mid) # type: constants.FanSpeed
+        self.air_swing_horizontal = params.get("airSwingHorizontal", constants.AirSwingLR.Mid) # type: constants.AirSwingLR
+        self.air_swing_vertical = params.get("airSwingVertical", constants.AirSwingUD.Mid) # type: constants.AirSwingUD
+        self.eco = params.get("eco", constants.EcoMode.Auto) # type: constants.EcoMode
+        self.nanoe = params.get("nanoe", constants.NanoeMode.On) # type: constants.NanoeMode
+
+    def refresh(self, state: "DeviceState"):
+        """
+        Refresh the state from the given one. This is to update the current state from desired when device has been succesfully
+        update. 
+        """
+        self.temperature = state.temperature
+        self.power = state.power
+        self.mode = state.mode
+        self.fan_speed = state.fan_speed
+        self.air_swing_horizontal = state.air_swing_horizontal
+        self.air_swing_vertical = state.air_swing_vertical
+        self.eco = state.eco
+        self.nanoe = state.nanoe
 
 class Device:
 
@@ -16,7 +43,8 @@ class Device:
         self._group = raw["group"]
         self._model = raw["model"]
         self._id = raw["id"]
-        self._params = {}
+        self._state = None # type: DeviceState
+        self._desired_state = None # type: DeviceState
         self._target_refresh = 0
         print("New device: {} ({})".format(self._name, self._ha_name))
 
@@ -41,17 +69,21 @@ class Device:
         if self._target_refresh < time():
             print("Retrieving data for {}/{} ({})".format(self._name, self._ha_name, self._id))
             data = session.get_device(self._id)
-            self._params = data["parameters"]
+            self._stage = DeviceState(data["parameters"])
+            # If we have not initialized the device yet, assume current params are the desired state
+            if not self._desired_state:
+                self._desired_state = DeviceState(data["parameters"])
             self._target_refresh = time() + refresh_delay
             print("Data received for {}/{} ({})".format(self._name, self._ha_name, self._id))
             return True
         return False
 
     def get_power(self) -> constants.Power:
-        return self._params["power"]
+        return self._state.power
 
     def set_power(self, power: constants.Power):
-        self._params["power"] = power
+        self._state.power = power
+        self._desired_state.power = power
 
     def get_power_str(self) -> str:
         return mappings.power_to_string.get(self.get_power())
@@ -63,7 +95,7 @@ class Device:
         return self._ha_name + "_ac"
 
     def get_mode(self) -> constants.OperationMode:
-        return self._params["mode"]
+        return self._state.mode
 
     def get_mode_str(self) -> str:
         if self.get_power() == constants.Power.Off:
@@ -71,7 +103,8 @@ class Device:
         return mappings.modes_to_string.get(self.get_mode())
 
     def set_mode(self, mode: constants.OperationMode):
-        self._params["mode"] = mode
+        self._state.mode = mode
+        self._desired_state.mode = mode
 
     def get_component(self) -> str:
         return "climate"
@@ -86,20 +119,39 @@ class Device:
         return self._id
 
     def set_target_temperature(self, target: float):
-        self._params["temperature"] = target
+        self._state.temperature = target
+        self._desired_state.temperature = target
 
     def get_target_temperature(self) -> float:
-        return self._params.get("temperature", 0)
+        return self._state.temperature
 
     def get_temperature(self) -> float:
-        return self._params.get("temperatureInside", 0)
+        return self._state.temperature_inside
 
     def get_temperature_outside(self) -> float:
-        return self._params.get("temperatureOutside", 0)
+        return self._state.temperature_outside
 
     def _publish_state(self, client: mqtt.Client):
         topic, mqtt_payload = state_event(self._topic_prefix, self)
         client.publish(topic, mqtt_payload)
+
+    def _refresh_soon(self):
+        """
+        Refresh the state "soonish"
+        """
+        self._target_refresh = time() + 10
+
+    def _update_state(self, session: pcomfortcloud.Session):
+        if session.set_device(self.get_internal_id(), 
+                mode=self._desired_state.mode,
+                power=self._desired_state.power,
+                temperature=self._desired_state.temperature,
+                fanSpeed=self._desired_state.fan_speed,
+                airSwingHorizontal=self._desired_state.air_swing_horizontal,
+                airSwingVertical=self._desired_state.air_swing_vertical,
+                eco=self._desired_state.eco):
+            self._state.refresh(self._desired_state)
+            self._refresh_soon()
 
     def _cmd_mode(self, session: pcomfortcloud.Session, payload: str):
         """
@@ -108,27 +160,23 @@ class Device:
         literal = mappings.modes_to_literal.get(payload)
         if literal:
             self.set_mode(literal)
-            session.set_device(self.get_internal_id(), mode=literal,
-                               power=constants.Power.On)
+            self.set_power(constants.Power.On)
+            self._update_state(session)
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
-                session.set_device(self.get_internal_id(),
-                                power=constants.Power.Off)
+                self._update_state(session)
         else:
             print("Unknown mode command: " + payload)
             return
-        self._target_refresh = time() + 2
 
     def _cmd_temp(self, session: pcomfortcloud.Session, payload: str):
         """
         Set target temperature command
         """
-        value = float(payload)
-        session.set_device(self.get_internal_id(), temperature=value)
-        self.set_target_temperature(payload)
-        self._target_refresh = time() + 2
+        self.set_target_temperature(float(payload))
+        self.update_state(session)
 
     def _cmd_power(self, session: pcomfortcloud.Session, payload: str):
         """
@@ -141,9 +189,7 @@ class Device:
         # Don't turn off the device twice
         if self.get_power() != literal:
             self.set_power(literal)
-            session.set_device(self.get_internal_id(), power=self.get_power())
-            # Update state right away to get the current mode if the device was turned on
-        self._target_refresh = time() + 2
+            self.update_state(session)
 
     def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str):
         """
