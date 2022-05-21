@@ -1,4 +1,4 @@
-from pcomfortcloud import constants
+from pcomfortcloud import constants # type: ignore
 
 modes_to_literal = {
     "fan_only": constants.OperationMode.Fan,
