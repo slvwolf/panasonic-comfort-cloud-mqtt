@@ -140,7 +140,7 @@ class Device:
         """
         self._target_refresh = time() + 10
 
-    def _update_state(self, session: pcomfortcloud.Session):
+    def _send_update(self, session: pcomfortcloud.Session):
         if session.set_device(self.get_internal_id(), 
                 mode=self._desired_state.mode,
                 power=self._desired_state.power,
@@ -160,12 +160,12 @@ class Device:
         if literal:
             self.set_mode(literal)
             self.set_power(constants.Power.On)
-            self._update_state(session)
+            self._send_update(session)
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
-                self._update_state(session)
+                self._send_update(session)
         else:
             print("Unknown mode command: " + payload)
             return
@@ -175,7 +175,7 @@ class Device:
         Set target temperature command
         """
         self.set_target_temperature(float(payload))
-        self.update_state(session)
+        self._send_update(session)
 
     def _cmd_power(self, session: pcomfortcloud.Session, payload: str):
         """
@@ -188,7 +188,7 @@ class Device:
         # Don't turn off the device twice
         if self.get_power() != literal:
             self.set_power(literal)
-            self.update_state(session)
+            self._send_update(session)
 
     def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str):
         """
