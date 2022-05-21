@@ -81,12 +81,16 @@ class Device:
             }
         """
         if self._target_refresh < time():
+            # If we have not initialized the device yet
+
             print("{}: Retrieving data".format(self.get_name()))
             data = session.get_device(self._id)
-            self._state.refresh_all(DeviceState(self.get_name(), data["parameters"]))
-            # If we have not initialized the device yet, assume current params are the desired state
+            if not self._state:
+                self._state = DeviceState(self.get_name(), data["parameters"])
             if not self._desired_state:
                 self._desired_state = DeviceState(self.get_name(), data["parameters"])
+
+            self._state.refresh_all(DeviceState(self.get_name(), data["parameters"]))
             self._target_refresh = time() + refresh_delay
             return True
         return False
