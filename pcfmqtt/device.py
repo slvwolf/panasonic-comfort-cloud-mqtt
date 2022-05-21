@@ -1,4 +1,3 @@
-import re
 from time import time
 import paho.mqtt.client as mqtt
 import pcomfortcloud
@@ -69,7 +68,7 @@ class Device:
         if self._target_refresh < time():
             print("Retrieving data for {}/{} ({})".format(self._name, self._ha_name, self._id))
             data = session.get_device(self._id)
-            self._stage = DeviceState(data["parameters"])
+            self._state = DeviceState(data["parameters"])
             # If we have not initialized the device yet, assume current params are the desired state
             if not self._desired_state:
                 self._desired_state = DeviceState(data["parameters"])
