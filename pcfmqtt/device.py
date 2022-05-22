@@ -62,7 +62,7 @@ class Device:
         self._model: str = raw["model"]
         self._id: str = raw["id"]
         self._target_refresh: float = 0
-        self._log = logging.getLogger(f"Device-{self.get_name()}")
+        self._log = logging.getLogger(f"Device.{self.get_name()}")
         self._state: DeviceState = DeviceState(self._log, self.get_name(), {}) 
         self._desired_state: DeviceState = DeviceState(self._log, self.get_name(), {})
         self._log.info("New device: %s (%s)", self._name, self._ha_name)
@@ -88,7 +88,7 @@ class Device:
         if self._target_refresh < time():
             # If we have not initialized the device yet
 
-            self._log.info("%s: Retrieving data", self.get_name())
+            self._log.info("Retrieving data")
             data = session.get_device(self._id)
             if self._desired_state.defaults:
                 self._desired_state = DeviceState(self._log, self.get_name(), data["parameters"])
@@ -173,7 +173,7 @@ class Device:
             self._state.refresh(self._desired_state)
             self._refresh_soon()
         else:
-            self._log.info("%s: Device update failed", self.get_name())
+            self._log.info("Device update failed")
 
     def _cmd_mode(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
@@ -186,14 +186,14 @@ class Device:
             self.set_mode(literal)
             self.set_power(constants.Power.On)
             self._send_update(session)
-            self._log.info("%s: Command ->  Mode set to %s", self.get_name(), payload)
+            self._log.info("Command ->  Mode set to %s", payload)
             return True
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
                 self._send_update(session)
-                self._log.info("%s: Command -> Mode set to %s", self.get_name(), payload)
+                self._log.info("Command -> Mode set to %s", payload)
                 return True
             self._log.info("Mode command would not lead to action, skipping: %r", payload)
             return False
@@ -213,7 +213,7 @@ class Device:
             return False
         self.set_target_temperature(new_temp)
         self._send_update(session)
-        self._log.info("%s: Command ->  Temperature set to %r", self.get_name(), payload)
+        self._log.info("Command ->  Temperature set to %r", payload)
         return True
 
     def _cmd_power(self, session: pcomfortcloud.Session, payload: str) -> bool:
@@ -230,7 +230,7 @@ class Device:
         if self.get_power() != literal:
             self.set_power(literal)
             self._send_update(session)
-            self._log.info("%s: Command -> Power set to %r", self.get_name(), payload)
+            self._log.info("Command -> Power set to %r", payload)
             return True
         self._log.info("Power command would not lead to action, skipping: %r", payload)
         return False
