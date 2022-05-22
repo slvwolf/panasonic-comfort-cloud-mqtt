@@ -18,9 +18,9 @@ class DeviceState:
         self.temperature_inside: int = params.get("temperatureInside", 0)
         self.temperature_outside: int = params.get("temperatureOutside", 0)
         self.mode: constants.OperationMode = params.get("mode", constants.OperationMode.Auto)
-        self.fan_speed: constants.FanSpeed = params.get("fanSpeed", constants.FanSpeed.Mid)
-        self.air_swing_horizontal: constants.AirSwingLR = params.get("airSwingHorizontal", constants.AirSwingLR.Mid) 
-        self.air_swing_vertical: constants.AirSwingUD = params.get("airSwingVertical", constants.AirSwingUD.Mid) 
+        self.fan_speed: constants.FanSpeed = params.get("fanSpeed", constants.FanSpeed.Auto)
+        self.air_swing_horizontal: constants.AirSwingLR = params.get("airSwingHorizontal", constants.AirSwingLR.Auto) 
+        self.air_swing_vertical: constants.AirSwingUD = params.get("airSwingVertical", constants.AirSwingUD.Auto) 
         self.eco: constants.EcoMode = params.get("eco", constants.EcoMode.Auto) 
         self.nanoe: constants.NanoeMode = params.get("nanoe", constants.NanoeMode.On) 
 
