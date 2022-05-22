@@ -83,7 +83,8 @@ class Service:
 
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         self._log.info("Connected")
-        client.subscribe("{}/#".format(self._topic_prefix))
+        for k in self._devices.keys():        
+            client.subscribe(f"{self._topic_prefix}/climate/{k}/#")
         client.subscribe("homeassistant/status")
         self._send_discovery_events()
 
@@ -122,6 +123,6 @@ class Service:
                 state_topic, state_payload = state_event(self._topic_prefix, device)
                 self._client.publish(state_topic, state_payload)
             else:
-                self._log.debug("%s: Reported no state change, ignoring")
+                self._log.debug("%s: Reported no state change, ignoring", device.get_name())
         else:
             self._log.debug("No device for this event, ignoring")
