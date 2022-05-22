@@ -25,7 +25,7 @@ def main():
     handler.setLevel(logging.DEBUG)
     format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(format)
-    logging.addHandler(handler)
+    logging.getLogger().addHandler(handler)
 
     if not args.username or not args.password or not args.server or not args.port or not args.topic:
         exit(parser.print_usage())
