@@ -1,21 +1,17 @@
 from time import time
 import typing
+import logging
 import paho.mqtt.client as mqtt # type: ignore
 import pcomfortcloud # type: ignore
 from pcfmqtt.events import state_event
 import pcfmqtt.mappings as mappings
 from pcomfortcloud import constants
 
-
-def log_if_updated(current_value: typing.Any, new_value: typing.Any, device_name: str, value_name: str):
-    if current_value != new_value:
-        print("%s: Updated %s ( %r -> %r )" % (device_name, value_name, current_value, new_value))
-    return new_value
-
 class DeviceState:
 
-    def __init__(self, name: str, params: dict) -> None:
+    def __init__(self, logger: logging.Logger, name: str, params: dict) -> None:
         self.name: str = name
+        self._log = logger
         self.defaults: bool = len(params) == 0
         self.temperature: float = params.get("temperature", 0) 
         self.power: constants.Power = params.get("power", constants.Power.Off)
@@ -28,13 +24,18 @@ class DeviceState:
         self.eco: constants.EcoMode = params.get("eco", constants.EcoMode.Auto) 
         self.nanoe: constants.NanoeMode = params.get("nanoe", constants.NanoeMode.On) 
 
+    def log_if_updated(self, current_value: typing.Any, new_value: typing.Any, device_name: str, value_name: str):
+        if current_value != new_value:
+            self._log.info("%s: Updated %s ( %r -> %r )", device_name, value_name, current_value, new_value)
+        return new_value
+
     def refresh_all(self, state: "DeviceState"):
         """
         Refresh the full state, including read-only metrics
         """
         self.refresh(state)
-        self.temperature_inside = log_if_updated(self.temperature_inside, state.temperature_inside, self.name, "temperature inside")
-        self.temperature_outside = log_if_updated(self.temperature_outside, state.temperature_outside, self.name, "temperature outside")
+        self.temperature_inside = self.log_if_updated(self.temperature_inside, state.temperature_inside, self.name, "temperature inside")
+        self.temperature_outside = self.log_if_updated(self.temperature_outside, state.temperature_outside, self.name, "temperature outside")
     
     def refresh(self, state: "DeviceState"):
         """
@@ -42,14 +43,14 @@ class DeviceState:
         update. 
         """
         self.defaults = False
-        self.temperature = log_if_updated(self.temperature, state.temperature, self.name, "temperature")
-        self.power = log_if_updated(self.power, state.power, self.name, "power")
-        self.mode = log_if_updated(self.mode, state.mode, self.name, "mode")
-        self.fan_speed = log_if_updated(self.fan_speed, state.fan_speed, self.name, "fan speed")
-        self.air_swing_horizontal = log_if_updated(self.air_swing_horizontal, state.air_swing_horizontal, self.name, "air swing horizontal")
-        self.air_swing_vertical = log_if_updated(self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
-        self.eco = log_if_updated(self.eco, state.eco, self.name, "eco")
-        self.nanoe = log_if_updated(self.nanoe, state.nanoe, self.name, "nanoe")
+        self.temperature = self.log_if_updated(self.temperature, state.temperature, self.name, "temperature")
+        self.power = self.log_if_updated(self.power, state.power, self.name, "power")
+        self.mode = self.log_if_updated(self.mode, state.mode, self.name, "mode")
+        self.fan_speed = self.log_if_updated(self.fan_speed, state.fan_speed, self.name, "fan speed")
+        self.air_swing_horizontal = self.log_if_updated(self.air_swing_horizontal, state.air_swing_horizontal, self.name, "air swing horizontal")
+        self.air_swing_vertical = self.log_if_updated(self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
+        self.eco = self.log_if_updated(self.eco, state.eco, self.name, "eco")
+        self.nanoe = self.log_if_updated(self.nanoe, state.nanoe, self.name, "nanoe")
 
 class Device:
 
@@ -60,10 +61,11 @@ class Device:
         self._group: str = raw["group"]
         self._model: str = raw["model"]
         self._id: str = raw["id"]
-        self._state: DeviceState = DeviceState(self.get_name(), {}) 
-        self._desired_state: DeviceState = DeviceState(self.get_name(), {})
         self._target_refresh: float = 0
-        print("New device: {} ({})".format(self._name, self._ha_name))
+        self._log = logging.getLogger(f"Device-{self.get_name()}")
+        self._state: DeviceState = DeviceState(self._log, self.get_name(), {}) 
+        self._desired_state: DeviceState = DeviceState(self._log, self.get_name(), {})
+        self._log.info("New device: %s (%s)", self._name, self._ha_name)
 
     def update_state(self, session: pcomfortcloud.Session, refresh_delay: float) -> bool:
         """
@@ -86,12 +88,12 @@ class Device:
         if self._target_refresh < time():
             # If we have not initialized the device yet
 
-            print("{}: Retrieving data".format(self.get_name()))
+            self._log.info("%s: Retrieving data", self.get_name())
             data = session.get_device(self._id)
-            if not self._desired_state.defaults:
-                self._desired_state = DeviceState(self.get_name(), data["parameters"])
+            if self._desired_state.defaults:
+                self._desired_state = DeviceState(self._log, self.get_name(), data["parameters"])
 
-            self._state.refresh_all(DeviceState(self.get_name(), data["parameters"]))
+            self._state.refresh_all(DeviceState(self._log, self.get_name(), data["parameters"]))
             self._target_refresh = time() + refresh_delay
             return True
         return False
@@ -171,7 +173,7 @@ class Device:
             self._state.refresh(self._desired_state)
             self._refresh_soon()
         else:
-            print("%s: Device update failed" % (self.get_name()))
+            self._log.info("%s: Device update failed", self.get_name())
 
     def _cmd_mode(self, session: pcomfortcloud.Session, payload: str) -> bool:
         """
@@ -184,18 +186,19 @@ class Device:
             self.set_mode(literal)
             self.set_power(constants.Power.On)
             self._send_update(session)
-            print("%s: Command ->  Mode set to %s" % (self.get_name(), payload))
+            self._log.info("%s: Command ->  Mode set to %s", self.get_name(), payload)
             return True
         elif payload == "off":
             # Don't turn off the device twice
             if self.get_power() != literal:
                 self.set_power(constants.Power.Off)
                 self._send_update(session)
-                print("%s: Command -> Mode set to %s" % (self.get_name(), payload))
+                self._log.info("%s: Command -> Mode set to %s", self.get_name(), payload)
                 return True
+            self._log.info("Mode command would not lead to action, skipping: %r", payload)
             return False
         else:
-            print("Unknown mode command: " + payload)
+            self._log.info("Unknown mode command: " + payload)
             return False
 
     def _cmd_temp(self, session: pcomfortcloud.Session, payload: str) -> bool:
@@ -206,10 +209,11 @@ class Device:
         """
         new_temp = float(payload)
         if new_temp == self._desired_state.temperature:
+            self._log.info("Temperature command would not lead to action, skipping: %s", payload)
             return False
         self.set_target_temperature(new_temp)
         self._send_update(session)
-        print("%s: Command ->  Temperature set to %s" % (self.get_name(), payload))
+        self._log.info("%s: Command ->  Temperature set to %r", self.get_name(), payload)
         return True
 
     def _cmd_power(self, session: pcomfortcloud.Session, payload: str) -> bool:
@@ -220,14 +224,15 @@ class Device:
         """
         literal = mappings.power_to_literal.get(payload.lower())
         if not literal:
-            print("Bad power command received: " + payload)
+            self._log.info("Bad power command received: %r", payload)
             return False
         # Don't turn off the device twice
         if self.get_power() != literal:
             self.set_power(literal)
             self._send_update(session)
-            print("%s: Command -> Power set to %s" % (self.get_name(), payload))
+            self._log.info("%s: Command -> Power set to %r", self.get_name(), payload)
             return True
+        self._log.info("Power command would not lead to action, skipping: %r", payload)
         return False
 
     def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str) -> bool:
@@ -244,5 +249,5 @@ class Device:
         elif command in ["config", "state"]:
             return False
         else:
-            print("Unknown command: " + command)
+            self._log.warn("Unknown command: %s", command)
             return False

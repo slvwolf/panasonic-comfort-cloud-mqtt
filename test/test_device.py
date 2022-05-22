@@ -1,10 +1,10 @@
 import unittest
-
+from unittest import mock
 from pcfmqtt.device import Device
 
 raw_data = {"name": "name", "group": "group", "model": "model", "id": "id"}
 
-class TestStringMethods(unittest.TestCase):
+class TestDevice(unittest.TestCase):
 
     def test_init(self):
         device = Device("topic", raw_data)
@@ -20,6 +20,33 @@ class TestStringMethods(unittest.TestCase):
     def test_fail_missing_raw_data(self):
         with self.assertRaises(KeyError):
             Device("topic", {})
+
+    def test_respect_update_delay(self):
+        device = Device("topic", raw_data)
+        session = mock.Mock()
+        session.get_device.return_value = {"parameters": {"temperature": 40}}
+        self.assertTrue(device.update_state(session, 10))
+        self.assertEqual(40, device._state.temperature)
+
+        session.get_device.return_value = {"parameters": {"temperature": 45}}
+        self.assertFalse(device.update_state(session, 10))
+        self.assertEqual(40, device._state.temperature)
+
+    def test_update_desired_state_once(self):
+        device = Device("topic", raw_data)
+        session = mock.Mock()
+        session.get_device.return_value = {"parameters": {"temperature": 40}}
+
+        # Update first time
+        device.update_state(session, 0)
+        self.assertEqual(40, device._state.temperature)
+        self.assertEqual(40, device._desired_state.temperature)
+
+        # Ignore new states in desired
+        session.get_device.return_value = {"parameters": {"temperature": 45}}
+        device.update_state(session, 0)
+        self.assertEqual(45, device._state.temperature)
+        self.assertEqual(40, device._desired_state.temperature)
 
 if __name__ == '__main__':
     unittest.main()

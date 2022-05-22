@@ -2,6 +2,7 @@ import pcomfortcloud # type: ignore
 import paho.mqtt.client as mqtt # type: ignore
 import time
 import types
+import logging
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
@@ -17,27 +18,28 @@ class Service:
         self._password = password
         self._mqtt = mqtt
         self._mqtt_port = mqtt_port
+        self._log = logging.getLogger('Service')
         self._update_interval = update_interval
         self._devices: types.Dict[str, Device] = {} # type: ignore
         self._client: mqtt.Client = None # type: ignore
         self._session: pcomfortcloud.Session = None   
     
     def start(self):
-        print("Connecting to Panasonic Comfort Cloud..")
+        self._log.info("Connecting to Panasonic Comfort Cloud..")
         self._session = pcomfortcloud.Session(self._username, self._password)
         self._session.login()
-        print("Connected")
+        self._log.info("Connected")
 
-        print("Reading and populating devices")
+        self._log.info("Reading and populating devices")
         for d in self._session.get_devices():
             device = Device(self._topic_prefix, d)
             # Refresh state after 30s so HA can pick it up
             device.update_state(self._session, 30)
             self._devices[device.get_id()] = device
 
-        print("Total {} devices found".format(len(self._devices)))
+        self._log.info("Total %i devices found", len(self._devices))
 
-        print("Starting up MQTT")
+        self._log.info("Starting up MQTT")
         self._client = mqtt.Client()
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
@@ -66,21 +68,21 @@ class Service:
                         # Protect Panasonic Comfort Cloud from being spammed with faulty requests. Service seems to
                         # experience a good amount of Bad Gateway errors so better to wait if too many errors are
                         # encountered.
-                        print("Sequence of errors detected. Halting requests for 10 minutes: %r" % e)
+                        self._log.warn("Sequence of errors detected. Halting requests for 10 minutes: %r", e)
                         time.sleep(600)
                     else:
-                        print("Error when updating device state: %r" % e)
+                        self._log.exception("Error when updating device state", e)
                         last_error = True
                         time.sleep(60)
         except KeyboardInterrupt as e:
-            print(e)
+            self._log.exception("Interrupted", e)
         finally:
-            print("Shutting down")
+            self._log.info("Shutting down")
             self._client.disconnect()
             self._session.logout()
 
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
-        print("Connected")
+        self._log.info("Connected")
         client.subscribe("{}/#".format(self._topic_prefix))
         client.subscribe("homeassistant/status")
         self._send_discovery_events()
@@ -89,17 +91,17 @@ class Service:
         for device in self._devices.values():
             events = discovery_event(self._topic_prefix, device)
             for topic, payload in events:
-                print("Publishing entity configuration to {}".format(topic))
+                self._log.info("Publishing entity configuration to %s", topic)
                 self._client.publish(topic, payload)
 
     def _handle_hass_status(self, client: mqtt.Client, payload: str):
         if payload == "online":
-            print("Received hass online event, resending configuration..")
+            self._log.info("Received hass online event, resending configuration..")
             self._send_discovery_events()
         elif payload == "offline":
-            print("Received hass offline event")
+            self._log.info("Received hass offline event")
         else:
-            print("Unknown status from hass: " + payload)
+            self._log.info("Unknown status from hass: %s", payload)
 
     def on_message(self, client: mqtt.Client, userdata, msg):
         if msg.topic == "homeassistant/status":
@@ -111,9 +113,15 @@ class Service:
         device_id = parts[2]
         command = parts[3]
 
+        payload = msg.payload.decode('utf-8')
+        self._log.debug("Received message (%s): %r", msg.topic, payload)
         device = self._devices.get(device_id)
         if device:
-            if device.command(client, self._session, command, msg.payload.decode('utf-8')):
-                print("%s: Reported state change, sendin update to HA" % (device.get_name()))
+            if device.command(client, self._session, command, payload):
+                self._log.info("%s: Reported state change, sending update to HA", device.get_name())
                 state_topic, state_payload = state_event(self._topic_prefix, device)
                 self._client.publish(state_topic, state_payload)
+            else:
+                self._log.debug("%s: Reported no state change, ignoring")
+        else:
+            self._log.debug("No device for this event, ignoring")

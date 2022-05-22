@@ -1,7 +1,7 @@
 import argparse
 import os
 import pcfmqtt.service
-
+import logging
 
 def main():
     parser = argparse.ArgumentParser(
@@ -16,8 +16,16 @@ def main():
                         help="MQTT server port, default 1883. Environment variable `MQTT_PORT`")
     parser.add_argument('-t', '--topic', type=str, default=os.environ.get('TOPIC_PREFIX') or "homeassistant",
                         help="MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.")
+    # parser.add_argument('-l', '--log', type=str, default=os.environ.get('LOG_LEVEL'),
+    #                 help="Logging level to use, defaults to INFO")
 
     args = parser.parse_args()
+
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(format)
+    logging.addHandler(handler)
 
     if not args.username or not args.password or not args.server or not args.port or not args.topic:
         exit(parser.print_usage())
