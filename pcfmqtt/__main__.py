@@ -21,11 +21,11 @@ def main():
 
     args = parser.parse_args()
 
+    logging.root.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
     format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(format)
-    logging.getLogger().addHandler(handler)
+    logging.root.addHandler(handler)
 
     if not args.username or not args.password or not args.server or not args.port or not args.topic:
         exit(parser.print_usage())
