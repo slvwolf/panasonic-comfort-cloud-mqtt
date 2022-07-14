@@ -1,7 +1,7 @@
 # Panasonic Comfort Cloud MQTT Bridge
 Home-Assistant MQTT bridge for Panasonic Comfort Cloud. 
 
-_Note: Current version has only been tested with model `CS-HZ25UKE` so there might be some problems with other models._
+_Note: Current version has been tested with model `CS-HZ25UKE`, let me know if noticing any problems with other models_
 
 ![HA](/ha-dashboard.png "HA")
 
