@@ -24,31 +24,45 @@ class Service:
         self._client: mqtt.Client = None # type: ignore
         self._session: pcomfortcloud.Session = None   
     
-    def start(self):
+    def connect_to_cc(self):
         self._log.info("Connecting to Panasonic Comfort Cloud..")
         self._session = pcomfortcloud.Session(self._username, self._password)
         self._session.login()
-        self._log.info("Connected")
-
         self._log.info("Reading and populating devices")
+        self._devices = {}
         for d in self._session.get_devices():
             device = Device(self._topic_prefix, d)
             # Refresh state after 30s so HA can pick it up
             device.update_state(self._session, 30)
             self._devices[device.get_id()] = device
-
         self._log.info("Total %i devices found", len(self._devices))
+        self._log.info("Connected to Panasonic Comfort Cloud")
 
-        self._log.info("Starting up MQTT")
+    def connect_mqtt(self):
+        try:
+            if self._client is not None:
+                self._client.disconnect()
+        except:
+            self._log.info("MQTT client already disconnected")
+        self._log.info("Starting up MQTT..")
         self._client = mqtt.Client()
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
         self._client.connect(self._mqtt, self._mqtt_port, 60)
         self._client.loop_start()
+        self._log.info("MQTT started")
+
+    def start(self):
+        self.connect_to_cc()
+        self.connect_mqtt()
         last_full_update = time.time()
         last_error = False  # Flag to represent whether we encountered error on last update pass
         try:
             while True:
+                if self._session is None:
+                    self._log.info("Resetting connection")
+                    self.connect_to_cc()
+                    self.connect_mqtt()
                 try:
                     for device in self._devices.values():
                         if device.update_state(self._session, self._update_interval):
@@ -70,6 +84,8 @@ class Service:
                         # encountered.
                         self._log.warn("Sequence of errors detected. Halting requests for 10 minutes: %r", e)
                         time.sleep(600)
+                        # Reset everything
+                        self._session = None
                     else:
                         self._log.exception("Error when updating device state", e)
                         last_error = True
