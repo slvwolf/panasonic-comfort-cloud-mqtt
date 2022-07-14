@@ -7,6 +7,21 @@ from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
 
+class SessionWrapper(pcomfortcloud.Session):
+    """
+    Wrapper for changing the version string in session 
+    """
+    def _headers(self):
+        return {
+            "X-APP-TYPE": "1",
+            "X-APP-VERSION": "1.15.1",
+            "X-User-Authorization": self._vid,
+            "User-Agent": "G-RAC",
+            "Accept": "application/json; charset=utf-8",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+
+
 class Service:
     """
     Main service
@@ -26,7 +41,7 @@ class Service:
     
     def connect_to_cc(self):
         self._log.info("Connecting to Panasonic Comfort Cloud..")
-        self._session = pcomfortcloud.Session(self._username, self._password)
+        self._session = SessionWrapper(self._username, self._password)
         self._session.login()
         self._log.info("Reading and populating devices")
         self._devices = {}
