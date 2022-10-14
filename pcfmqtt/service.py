@@ -14,7 +14,7 @@ class SessionWrapper(pcomfortcloud.Session):
     def _headers(self):
         return {
             "X-APP-TYPE": "1",
-            "X-APP-VERSION": "1.15.1",
+            "X-APP-VERSION": "1.16.0",
             "X-User-Authorization": self._vid,
             "User-Agent": "G-RAC",
             "Accept": "application/json; charset=utf-8",
