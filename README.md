@@ -70,7 +70,6 @@ To access the logs run,
 
 ### Plans for version 1.0.0
 
-- [ ] Proper documentation
 - [ ] Docker package
 
 ### Beyound 1.x
