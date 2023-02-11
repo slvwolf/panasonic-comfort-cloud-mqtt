@@ -27,31 +27,44 @@ class Service:
     Main service
     """
 
-    def __init__(self, username: str, password: str, mqtt: str, mqtt_port: int, topic_prefix: str, update_interval: int = 60) -> None:
+    def __init__(self, username: str, password: str, mqtt_addr: str, mqtt_port: int, topic_prefix: str, update_interval: int = 60) -> None:
         self._topic_prefix = topic_prefix
         self._username = username
         self._password = password
-        self._mqtt = mqtt
+        self._mqtt = mqtt_addr
         self._mqtt_port = mqtt_port
         self._log = logging.getLogger('Service')
         self._update_interval = update_interval
         self._devices: types.Dict[str, Device] = {} # type: ignore
         self._client: mqtt.Client = None # type: ignore
-        self._session: pcomfortcloud.Session = None   
+        self._session: pcomfortcloud.Session = None
+        self._wrapper_session = SessionWrapper
+        self._wrapper_mqtt = mqtt.Client
     
-    def connect_to_cc(self):
+    def connect_to_cc(self) -> bool:
+        """
+        Connect to Panasonic Comfort Cloud. This will also populate the initial devices list.
+
+        @return: True if connected, False otherwise
+        """
         self._log.info("Connecting to Panasonic Comfort Cloud..")
-        self._session = SessionWrapper(self._username, self._password)
-        self._session.login()
-        self._log.info("Reading and populating devices")
-        self._devices = {}
-        for d in self._session.get_devices():
-            device = Device(self._topic_prefix, d)
-            # Refresh state after 30s so HA can pick it up
-            device.update_state(self._session, 30)
-            self._devices[device.get_id()] = device
+        self._session = self._wrapper_session(self._username, self._password)
+        try:
+            self._session.login()
+            self._log.info("Login succesfull. Reading and populating devices")
+            self._devices = {}
+            for d in self._session.get_devices():
+                device = Device(self._topic_prefix, d)
+                # Refresh state after 30s so HA can pick it up
+                device.update_state(self._session, 30)
+                self._devices[device.get_id()] = device
+        except Exception as e:
+            self._log.error("Failed initialization to Panasonic Comfort Cloud: %s. Will attempt again in 10 minutes.", e)
+            self._session = None
+            return False
         self._log.info("Total %i devices found", len(self._devices))
         self._log.info("Connected to Panasonic Comfort Cloud")
+        return True
 
     def connect_mqtt(self):
         try:
@@ -60,12 +73,25 @@ class Service:
         except:
             self._log.info("MQTT client already disconnected")
         self._log.info("Starting up MQTT..")
-        self._client = mqtt.Client()
+        self._client = self._wrapper_mqtt()
         self._client.on_connect = self.on_connect
         self._client.on_message = self.on_message
         self._client.connect(self._mqtt, self._mqtt_port, 60)
         self._client.loop_start()
         self._log.info("MQTT started")
+
+    def _check_and_reconnect(self) -> bool:
+        """
+        Check if we are connected to CC and MQTT. If not, try to reconnect.
+
+        @return: True if connected, False otherwise
+        """
+        if self._session is None:
+            self._log.info("Resetting connection")
+            status = self.connect_to_cc()
+            self.connect_mqtt()
+            return status
+        return True
 
     def start(self):
         self.connect_to_cc()
@@ -74,10 +100,10 @@ class Service:
         last_error = False  # Flag to represent whether we encountered error on last update pass
         try:
             while True:
-                if self._session is None:
-                    self._log.info("Resetting connection")
-                    self.connect_to_cc()
-                    self.connect_mqtt()
+                if not self._check_and_reconnect():
+                    self._log.warn("Connection errors. Waiting for 10 minutes: %r", e)
+                    time.sleep(600)
+                    continue
                 try:
                     for device in self._devices.values():
                         if device.update_state(self._session, self._update_interval):
