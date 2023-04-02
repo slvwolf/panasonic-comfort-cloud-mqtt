@@ -83,5 +83,6 @@ def state_event(topic_prefix: str, device) -> typing.Tuple[str, str]:
         "target_temperature": device.get_target_temperature(),
         "inside_temperature": device.get_temperature(),
         "outside_temperature": device.get_temperature_outside(),
+        "update_epoch": device.get_update_epoch()
     }
     return (topic, json.dumps(payload))

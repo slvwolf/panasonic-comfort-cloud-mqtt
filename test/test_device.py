@@ -48,5 +48,13 @@ class TestDevice(unittest.TestCase):
         self.assertEqual(45, device._state.temperature)
         self.assertEqual(40, device._desired_state.temperature)
 
+    def test_update_epoch_on_refresh(self):
+        device = Device("topic", raw_data)
+        session = mock.Mock()
+        session.get_device.return_value = {"parameters": {"temperature": 40}}
+        value = device.get_update_epoch()
+        device.update_state(session, 0)
+        self.assertGreater(device.get_update_epoch(), value)
+
 if __name__ == '__main__':
     unittest.main()

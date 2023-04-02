@@ -23,6 +23,7 @@ class DeviceState:
         self.air_swing_vertical: constants.AirSwingUD = params.get("airSwingVertical", constants.AirSwingUD.Auto) 
         self.eco: constants.EcoMode = params.get("eco", constants.EcoMode.Auto) 
         self.nanoe: constants.NanoeMode = params.get("nanoe", constants.NanoeMode.On) 
+        self.epoch: float = time()
 
     def log_if_updated(self, current_value: typing.Any, new_value: typing.Any, device_name: str, value_name: str):
         if current_value != new_value:
@@ -51,6 +52,7 @@ class DeviceState:
         self.air_swing_vertical = self.log_if_updated(self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
         self.eco = self.log_if_updated(self.eco, state.eco, self.name, "eco")
         self.nanoe = self.log_if_updated(self.nanoe, state.nanoe, self.name, "nanoe")
+        self.epoch = time()
 
 class Device:
 
@@ -135,6 +137,9 @@ class Device:
         Unique device id to identify the devices in Panasonic Cloud
         """
         return self._id
+
+    def get_update_epoch(self) -> float:
+        return self._state.epoch
 
     def set_target_temperature(self, target: float):
         self._desired_state.temperature = target
