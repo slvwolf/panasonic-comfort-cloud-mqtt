@@ -101,7 +101,7 @@ class Service:
         try:
             while True:
                 if not self._check_and_reconnect():
-                    self._log.warn("Connection errors. Waiting for 10 minutes: %r", e)
+                    self._log.warn("Connection errors. Waiting for 10 minutes")
                     time.sleep(600)
                     continue
                 try:
@@ -135,8 +135,10 @@ class Service:
             self._log.exception("Interrupted", e)
         finally:
             self._log.info("Shutting down")
-            self._client.disconnect()
-            self._session.logout()
+            if self._client is not None:
+                self._client.disconnect()
+            if self._session is not None:
+                self._session.logout()
 
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         self._log.info("Connected")
