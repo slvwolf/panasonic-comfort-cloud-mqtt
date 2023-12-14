@@ -3,9 +3,17 @@ import paho.mqtt.client as mqtt # type: ignore
 import time
 import types
 import logging
+import requests
+import json
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
+# Pached version of pcomfortcloud.Session to fix compatibility issues with latest version of Panasonic Comfort Cloud
+def _validate_response(response):
+    """ Verify that response is OK """
+    if response.status_code == 200:
+        return
+    raise pcomfortcloud.ResponseError(response.status_code, response.text)
 
 class SessionWrapper(pcomfortcloud.Session):
     """
@@ -23,6 +31,29 @@ class SessionWrapper(pcomfortcloud.Session):
             "Accept": "application/json; charset=utf-8",
             "Content-Type": "application/json; charset=utf-8"
         }
+
+    def _create_token(self):
+        response = None
+        payload = {
+            "language": 0,
+            "loginId": self._username,
+            "password": self._password
+        }
+        if self._raw:
+            print("--- creating token by authenticating")
+        try:
+            response = requests.post(
+                pcomfortcloud.urls.login(), json=payload, headers=self._headers(), verify=self._verifySsl)
+            if 2 != response.status_code // 100:
+                raise pcomfortcloud.ResponseError(response.status_code, response.text)
+        except requests.exceptions.RequestException as ex:
+            raise pcomfortcloud.LoginError(ex)
+        _validate_response(response)
+        if (self._raw is True):
+            print("--- raw beginning ---")
+            print(response.text)
+            print("--- raw ending    ---\n")
+        self._vid = json.loads(response.text)['uToken']
 
 
 class Service:
