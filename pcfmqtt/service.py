@@ -1,5 +1,5 @@
-import pcomfortcloud # type: ignore
-import paho.mqtt.client as mqtt # type: ignore
+import pcomfortcloud  # type: ignore
+import paho.mqtt.client as mqtt  # type: ignore
 import time
 import types
 import logging
@@ -9,16 +9,20 @@ from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
 # Pached version of pcomfortcloud.Session to fix compatibility issues with latest version of Panasonic Comfort Cloud
+
+
 def _validate_response(response):
     """ Verify that response is OK """
     if response.status_code == 200:
         return
     raise pcomfortcloud.ResponseError(response.status_code, response.text)
 
+
 class SessionWrapper(pcomfortcloud.Session):
     """
     Wrapper for changing the version string in session 
     """
+
     def _headers(self):
         return {
             "X-APP-TYPE": "1",
@@ -45,7 +49,8 @@ class SessionWrapper(pcomfortcloud.Session):
             response = requests.post(
                 pcomfortcloud.urls.login(), json=payload, headers=self._headers(), verify=self._verifySsl)
             if 2 != response.status_code // 100:
-                raise pcomfortcloud.ResponseError(response.status_code, response.text)
+                raise pcomfortcloud.ResponseError(
+                    response.status_code, response.text)
         except requests.exceptions.RequestException as ex:
             raise pcomfortcloud.LoginError(ex)
         _validate_response(response)
@@ -69,12 +74,12 @@ class Service:
         self._mqtt_port = mqtt_port
         self._log = logging.getLogger('Service')
         self._update_interval = update_interval
-        self._devices: types.Dict[str, Device] = {} # type: ignore
-        self._client: mqtt.Client = None # type: ignore
+        self._devices: types.Dict[str, Device] = {}  # type: ignore
+        self._client: mqtt.Client = None  # type: ignore
         self._session: pcomfortcloud.Session = None
         self._wrapper_session = SessionWrapper
         self._wrapper_mqtt = mqtt.Client
-    
+
     def connect_to_cc(self) -> bool:
         """
         Connect to Panasonic Comfort Cloud. This will also populate the initial devices list.
@@ -93,7 +98,8 @@ class Service:
                 device.update_state(self._session, 30)
                 self._devices[device.get_id()] = device
         except Exception as e:
-            self._log.error("Failed initialization to Panasonic Comfort Cloud: %s. Will attempt again in 10 minutes.", e)
+            self._log.error(
+                "Failed initialization to Panasonic Comfort Cloud: %s. Will attempt again in 10 minutes.", e)
             self._session = None
             return False
         self._log.info("Total %i devices found", len(self._devices))
@@ -157,12 +163,14 @@ class Service:
                         # Protect Panasonic Comfort Cloud from being spammed with faulty requests. Service seems to
                         # experience a good amount of Bad Gateway errors so better to wait if too many errors are
                         # encountered.
-                        self._log.warn("Sequence of errors detected. Halting requests for 10 minutes: %r", e)
+                        self._log.warn(
+                            "Sequence of errors detected. Halting requests for 10 minutes: %r", e)
                         time.sleep(600)
                         # Reset everything
                         self._session = None
                     else:
-                        self._log.exception("Error when updating device state", e)
+                        self._log.exception(
+                            "Error when updating device state", e)
                         last_error = True
                         time.sleep(60)
         except KeyboardInterrupt as e:
@@ -176,7 +184,7 @@ class Service:
 
     def on_connect(self, client: mqtt.Client, userdata, flags, rc):
         self._log.info("Connected")
-        for k in self._devices.keys():        
+        for k in self._devices.keys():
             client.subscribe(f"{self._topic_prefix}/climate/{k}/#")
         client.subscribe("homeassistant/status")
         self._send_discovery_events()
@@ -190,7 +198,8 @@ class Service:
 
     def _handle_hass_status(self, client: mqtt.Client, payload: str):
         if payload == "online":
-            self._log.info("Received hass online event, resending configuration..")
+            self._log.info(
+                "Received hass online event, resending configuration..")
             self._send_discovery_events()
         elif payload == "offline":
             self._log.info("Received hass offline event")
@@ -212,10 +221,13 @@ class Service:
         device = self._devices.get(device_id)
         if device:
             if device.command(client, self._session, command, payload):
-                self._log.info("%s: Reported state change, sending update to HA", device.get_name())
-                state_topic, state_payload = state_event(self._topic_prefix, device)
+                self._log.info(
+                    "%s: Reported state change, sending update to HA", device.get_name())
+                state_topic, state_payload = state_event(
+                    self._topic_prefix, device)
                 self._client.publish(state_topic, state_payload)
             else:
-                self._log.debug("%s: Reported no state change, ignoring", device.get_name())
+                self._log.debug(
+                    "%s: Reported no state change, ignoring", device.get_name())
         else:
             self._log.debug("No device for this event, ignoring")

@@ -4,6 +4,7 @@ from pcfmqtt.device import Device
 
 raw_data = {"name": "name", "group": "group", "model": "model", "id": "id"}
 
+
 class TestDevice(unittest.TestCase):
 
     def test_init(self):
@@ -55,6 +56,7 @@ class TestDevice(unittest.TestCase):
         value = device.get_update_epoch()
         device.update_state(session, 0)
         self.assertGreater(device.get_update_epoch(), value)
+
 
 if __name__ == '__main__':
     unittest.main()

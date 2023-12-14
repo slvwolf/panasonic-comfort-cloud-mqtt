@@ -2,6 +2,7 @@ import unittest
 from unittest import mock
 from pcfmqtt.service import Service
 
+
 class TestService(unittest.TestCase):
 
     def test_init(self):
@@ -17,5 +18,3 @@ class TestService(unittest.TestCase):
         self.assertEqual({}, service._devices)
         self.assertIsNone(service._client)
         self.assertIsNone(service._session)
-
-    

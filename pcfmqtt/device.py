@@ -1,11 +1,12 @@
 from time import time
 import typing
 import logging
-import paho.mqtt.client as mqtt # type: ignore
-import pcomfortcloud # type: ignore
+import paho.mqtt.client as mqtt  # type: ignore
+import pcomfortcloud  # type: ignore
 from pcfmqtt.events import state_event
 import pcfmqtt.mappings as mappings
 from pcomfortcloud import constants
+
 
 class DeviceState:
 
@@ -13,21 +14,27 @@ class DeviceState:
         self.name: str = name
         self._log = logger
         self.defaults: bool = len(params) == 0
-        self.temperature: float = params.get("temperature", 0) 
+        self.temperature: float = params.get("temperature", 0)
         self.power: constants.Power = params.get("power", constants.Power.Off)
         self.temperature_inside: int = params.get("temperatureInside", 0)
         self.temperature_outside: int = params.get("temperatureOutside", 0)
-        self.mode: constants.OperationMode = params.get("mode", constants.OperationMode.Auto)
-        self.fan_speed: constants.FanSpeed = params.get("fanSpeed", constants.FanSpeed.Auto)
-        self.air_swing_horizontal: constants.AirSwingLR = params.get("airSwingHorizontal", constants.AirSwingLR.Auto) 
-        self.air_swing_vertical: constants.AirSwingUD = params.get("airSwingVertical", constants.AirSwingUD.Auto) 
-        self.eco: constants.EcoMode = params.get("eco", constants.EcoMode.Auto) 
-        self.nanoe: constants.NanoeMode = params.get("nanoe", constants.NanoeMode.On) 
+        self.mode: constants.OperationMode = params.get(
+            "mode", constants.OperationMode.Auto)
+        self.fan_speed: constants.FanSpeed = params.get(
+            "fanSpeed", constants.FanSpeed.Auto)
+        self.air_swing_horizontal: constants.AirSwingLR = params.get(
+            "airSwingHorizontal", constants.AirSwingLR.Auto)
+        self.air_swing_vertical: constants.AirSwingUD = params.get(
+            "airSwingVertical", constants.AirSwingUD.Auto)
+        self.eco: constants.EcoMode = params.get("eco", constants.EcoMode.Auto)
+        self.nanoe: constants.NanoeMode = params.get(
+            "nanoe", constants.NanoeMode.On)
         self.epoch: float = time()
 
     def log_if_updated(self, current_value: typing.Any, new_value: typing.Any, device_name: str, value_name: str):
         if current_value != new_value:
-            self._log.info("%s: Updated %s ( %r -> %r )", device_name, value_name, current_value, new_value)
+            self._log.info("%s: Updated %s ( %r -> %r )",
+                           device_name, value_name, current_value, new_value)
         return new_value
 
     def refresh_all(self, state: "DeviceState"):
@@ -35,38 +42,50 @@ class DeviceState:
         Refresh the full state, including read-only metrics
         """
         self.refresh(state)
-        self.temperature_inside = self.log_if_updated(self.temperature_inside, state.temperature_inside, self.name, "temperature inside")
-        self.temperature_outside = self.log_if_updated(self.temperature_outside, state.temperature_outside, self.name, "temperature outside")
-    
+        self.temperature_inside = self.log_if_updated(
+            self.temperature_inside, state.temperature_inside, self.name, "temperature inside")
+        self.temperature_outside = self.log_if_updated(
+            self.temperature_outside, state.temperature_outside, self.name, "temperature outside")
+
     def refresh(self, state: "DeviceState"):
         """
         Refresh the state from the given one. This is to update the current state from desired when device has been succesfully
         update. 
         """
         self.defaults = False
-        self.temperature = self.log_if_updated(self.temperature, state.temperature, self.name, "temperature")
-        self.power = self.log_if_updated(self.power, state.power, self.name, "power")
-        self.mode = self.log_if_updated(self.mode, state.mode, self.name, "mode")
-        self.fan_speed = self.log_if_updated(self.fan_speed, state.fan_speed, self.name, "fan speed")
-        self.air_swing_horizontal = self.log_if_updated(self.air_swing_horizontal, state.air_swing_horizontal, self.name, "air swing horizontal")
-        self.air_swing_vertical = self.log_if_updated(self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
+        self.temperature = self.log_if_updated(
+            self.temperature, state.temperature, self.name, "temperature")
+        self.power = self.log_if_updated(
+            self.power, state.power, self.name, "power")
+        self.mode = self.log_if_updated(
+            self.mode, state.mode, self.name, "mode")
+        self.fan_speed = self.log_if_updated(
+            self.fan_speed, state.fan_speed, self.name, "fan speed")
+        self.air_swing_horizontal = self.log_if_updated(
+            self.air_swing_horizontal, state.air_swing_horizontal, self.name, "air swing horizontal")
+        self.air_swing_vertical = self.log_if_updated(
+            self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
         self.eco = self.log_if_updated(self.eco, state.eco, self.name, "eco")
-        self.nanoe = self.log_if_updated(self.nanoe, state.nanoe, self.name, "nanoe")
+        self.nanoe = self.log_if_updated(
+            self.nanoe, state.nanoe, self.name, "nanoe")
         self.epoch = time()
+
 
 class Device:
 
     def __init__(self, topic_prefix: str, raw: dict) -> None:
         self._name: str = raw["name"]
         self._topic_prefix: str = topic_prefix
-        self._ha_name: str = "pcc_" + raw["name"].lower().replace(" ", "_").strip()
+        self._ha_name: str = "pcc_" + \
+            raw["name"].lower().replace(" ", "_").strip()
         self._group: str = raw["group"]
         self._model: str = raw["model"]
         self._id: str = raw["id"]
         self._target_refresh: float = 0
         self._log = logging.getLogger(f"Device.{self.get_name()}")
-        self._state: DeviceState = DeviceState(self._log, self.get_name(), {}) 
-        self._desired_state: DeviceState = DeviceState(self._log, self.get_name(), {})
+        self._state: DeviceState = DeviceState(self._log, self.get_name(), {})
+        self._desired_state: DeviceState = DeviceState(
+            self._log, self.get_name(), {})
         self._log.info("New device: %s (%s)", self._name, self._ha_name)
 
     def update_state(self, session: pcomfortcloud.Session, refresh_delay: float) -> bool:
@@ -93,9 +112,11 @@ class Device:
             self._log.info("Retrieving data")
             data = session.get_device(self._id)
             if self._desired_state.defaults:
-                self._desired_state = DeviceState(self._log, self.get_name(), data["parameters"])
+                self._desired_state = DeviceState(
+                    self._log, self.get_name(), data["parameters"])
 
-            self._state.refresh_all(DeviceState(self._log, self.get_name(), data["parameters"]))
+            self._state.refresh_all(DeviceState(
+                self._log, self.get_name(), data["parameters"]))
             self._target_refresh = time() + refresh_delay
             return True
         return False
@@ -167,14 +188,14 @@ class Device:
         self._target_refresh = time() + 5
 
     def _send_update(self, session: pcomfortcloud.Session):
-        if session.set_device(self.get_internal_id(), 
-                mode=self._desired_state.mode,
-                power=self._desired_state.power,
-                temperature=self._desired_state.temperature,
-                fanSpeed=self._desired_state.fan_speed,
-                airSwingHorizontal=self._desired_state.air_swing_horizontal,
-                airSwingVertical=self._desired_state.air_swing_vertical,
-                eco=self._desired_state.eco):
+        if session.set_device(self.get_internal_id(),
+                              mode=self._desired_state.mode,
+                              power=self._desired_state.power,
+                              temperature=self._desired_state.temperature,
+                              fanSpeed=self._desired_state.fan_speed,
+                              airSwingHorizontal=self._desired_state.air_swing_horizontal,
+                              airSwingVertical=self._desired_state.air_swing_vertical,
+                              eco=self._desired_state.eco):
             self._state.refresh(self._desired_state)
             self._refresh_soon()
         else:
@@ -200,7 +221,8 @@ class Device:
                 self._send_update(session)
                 self._log.info("Command -> Mode set to %s", payload)
                 return True
-            self._log.info("Mode command would not lead to action, skipping: %r", payload)
+            self._log.info(
+                "Mode command would not lead to action, skipping: %r", payload)
             return False
         else:
             self._log.info("Unknown mode command: " + payload)
@@ -214,7 +236,8 @@ class Device:
         """
         new_temp = float(payload)
         if new_temp == self._desired_state.temperature:
-            self._log.info("Temperature command would not lead to action, skipping: %s", payload)
+            self._log.info(
+                "Temperature command would not lead to action, skipping: %s", payload)
             return False
         self.set_target_temperature(new_temp)
         self._send_update(session)
@@ -237,13 +260,14 @@ class Device:
             self._send_update(session)
             self._log.info("Command -> Power set to %r", payload)
             return True
-        self._log.info("Power command would not lead to action, skipping: %r", payload)
+        self._log.info(
+            "Power command would not lead to action, skipping: %r", payload)
         return False
 
     def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str) -> bool:
         """
         Resolve command coming from HomeAssistant / MQTT. 
-        
+
         Returns true if something changed and state update needs to be delivered
         """
         cmd = {"mode_cmd": self._cmd_mode,

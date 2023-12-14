@@ -10,6 +10,7 @@ logger_mapping = {
     "ERROR": logging.ERROR,
     "CRITICAL": logging.CRITICAL}
 
+
 def main():
     parser = argparse.ArgumentParser(
         description='Home-Assistant MQTT bridge for Panasonic Comfort Cloud')
@@ -23,14 +24,15 @@ def main():
                         help="MQTT server port, default 1883. Environment variable `MQTT_PORT`")
     parser.add_argument('-t', '--topic', type=str, default=os.environ.get('TOPIC_PREFIX') or "homeassistant",
                         help="MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.")
-    parser.add_argument('-l', '--log', type=str, default=os.environ.get('LOG_LEVEL') or "INFO", 
+    parser.add_argument('-l', '--log', type=str, default=os.environ.get('LOG_LEVEL') or "INFO",
                         choices=logger_mapping.keys(),
                         help="Logging level to use, defaults to INFO")
 
     args = parser.parse_args()
     logging.root.setLevel(logger_mapping.get(args.log))
     handler = logging.StreamHandler()
-    format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    format = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(format)
     logging.root.addHandler(handler)
 
