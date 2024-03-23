@@ -22,5 +22,5 @@ setup(name='panasonic-comfort-cloud-mqtt',
       ],
       packages=['pcfmqtt'],
       license='MIT',
-      install_requires=['pcomfortcloud>=0.0.22', 'paho-mqtt>=1.6.1'],
+      install_requires=['pcomfortcloud>=0.0.22', 'paho-mqtt==1.6.1'],
       )
