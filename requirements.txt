@@ -1,3 +1,5 @@
 pcomfortcloud>=0.1.0
 paho-mqtt==1.6.1
 requests
+urllib3
+bs4
