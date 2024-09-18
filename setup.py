@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-
 from distutils.core import setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='panasonic-comfort-cloud-mqtt',
-      version='0.5.1',
+      version='0.6.0',
       description='Home-Assistant MQTT bridge for Panasonic Comfort Cloud ',
       long_description=long_description,
       long_description_content_type="text/markdown",
