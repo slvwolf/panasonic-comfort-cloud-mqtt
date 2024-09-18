@@ -1,64 +1,11 @@
-import pcomfortcloud  # type: ignore
-import paho.mqtt.client as mqtt  # type: ignore
+""" Main service for pcfmqtt """
 import time
-import types
+import typing
 import logging
-import requests
-import json
+import pcomfortcloud
+import paho.mqtt.client as mqtt
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
-
-# Pached version of pcomfortcloud.Session to fix compatibility issues with latest version of Panasonic Comfort Cloud
-
-
-def _validate_response(response):
-    """ Verify that response is OK """
-    if response.status_code == 200:
-        return
-    raise pcomfortcloud.ResponseError(response.status_code, response.text)
-
-
-class SessionWrapper(pcomfortcloud.Session):
-    """
-    Wrapper for changing the version string in session 
-    """
-
-    def _headers(self):
-        return {
-            "X-APP-TYPE": "1",
-            "X-APP-VERSION": "1.20.0",
-            "X-User-Authorization": self._vid,
-            "X-APP-TIMESTAMP": "1",
-            "X-APP-NAME": "Comfort Cloud",
-            "X-CFC-API-KEY": "Comfort Cloud",
-            "User-Agent": "G-RAC",
-            "Accept": "application/json; charset=utf-8",
-            "Content-Type": "application/json; charset=utf-8"
-        }
-
-    def _create_token(self):
-        response = None
-        payload = {
-            "language": 0,
-            "loginId": self._username,
-            "password": self._password
-        }
-        if self._raw:
-            print("--- creating token by authenticating")
-        try:
-            response = requests.post(
-                pcomfortcloud.urls.login(), json=payload, headers=self._headers(), verify=self._verifySsl)
-            if 2 != response.status_code // 100:
-                raise pcomfortcloud.ResponseError(
-                    response.status_code, response.text)
-        except requests.exceptions.RequestException as ex:
-            raise pcomfortcloud.LoginError(ex)
-        _validate_response(response)
-        if (self._raw is True):
-            print("--- raw beginning ---")
-            print(response.text)
-            print("--- raw ending    ---\n")
-        self._vid = json.loads(response.text)['uToken']
 
 
 class Service:
@@ -74,10 +21,9 @@ class Service:
         self._mqtt_port = mqtt_port
         self._log = logging.getLogger('Service')
         self._update_interval = update_interval
-        self._devices: types.Dict[str, Device] = {}  # type: ignore
+        self._devices: typing.Dict[str, Device] = {}  # type: ignore
         self._client: mqtt.Client = None  # type: ignore
         self._session: pcomfortcloud.Session = None
-        self._wrapper_session = SessionWrapper
         self._wrapper_mqtt = mqtt.Client
 
     def connect_to_cc(self) -> bool:
@@ -87,7 +33,7 @@ class Service:
         @return: True if connected, False otherwise
         """
         self._log.info("Connecting to Panasonic Comfort Cloud..")
-        self._session = self._wrapper_session(self._username, self._password)
+        self._session = pcomfortcloud.Session(self._username, self._password)
         try:
             self._session.login()
             self._log.info("Login succesfull. Reading and populating devices")
@@ -160,21 +106,21 @@ class Service:
                     if isinstance(e, KeyboardInterrupt):
                         raise e
                     if last_error:
-                        # Protect Panasonic Comfort Cloud from being spammed with faulty requests. Service seems to
-                        # experience a good amount of Bad Gateway errors so better to wait if too many errors are
-                        # encountered.
-                        self._log.warn(
-                            "Sequence of errors detected. Halting requests for 10 minutes: %r", e)
+                        # Protect Panasonic Comfort Cloud from being spammed with faulty requests.
+                        # Service seems to experience a good amount of Bad Gateway errors so better
+                        # to wait if too many errors are encountered.
+                        self._log.warning("Sequence of errors detected. " +
+                                          "Halting requests for 10 minutes: %r", e)
                         time.sleep(600)
                         # Reset everything
                         self._session = None
                     else:
                         self._log.exception(
-                            "Error when updating device state", e)
+                            "Error when updating device state: %r", e)
                         last_error = True
                         time.sleep(60)
         except KeyboardInterrupt as e:
-            self._log.exception("Interrupted", e)
+            self._log.exception("Interrupted: %r", e)
         finally:
             self._log.info("Shutting down")
             if self._client is not None:
@@ -182,7 +128,7 @@ class Service:
             if self._session is not None:
                 self._session.logout()
 
-    def on_connect(self, client: mqtt.Client, userdata, flags, rc):
+    def on_connect(self, client: mqtt.Client, _userdata, _flags, _rc):
         self._log.info("Connected")
         for k in self._devices.keys():
             client.subscribe(f"{self._topic_prefix}/climate/{k}/#")
@@ -196,7 +142,7 @@ class Service:
                 self._log.info("Publishing entity configuration to %s", topic)
                 self._client.publish(topic, payload)
 
-    def _handle_hass_status(self, client: mqtt.Client, payload: str):
+    def _handle_hass_status(self, _client: mqtt.Client, payload: str):
         if payload == "online":
             self._log.info(
                 "Received hass online event, resending configuration..")
@@ -206,7 +152,7 @@ class Service:
         else:
             self._log.info("Unknown status from hass: %s", payload)
 
-    def on_message(self, client: mqtt.Client, userdata, msg):
+    def on_message(self, client: mqtt.Client, _userdata, msg):
         if msg.topic == "homeassistant/status":
             self._handle_hass_status(client, msg.payload.decode('utf-8'))
             return

@@ -12,7 +12,7 @@ def discovery_topic(topic_prefix: str, component: str, device_id: str) -> str:
 
     Details: https://www.home-assistant.io/docs/mqtt/discovery/
     """
-    return "{}/{}/{}/config".format(topic_prefix, component, device_id)
+    return f"{topic_prefix}/{component}/{device_id}/config"
 
 
 def _create_discovery_temperature_sensor_tuple(topic_prefix: str, base_topic_path: str, sensor_name: str, device) -> typing.Tuple[str, str]:
@@ -26,11 +26,10 @@ def _create_discovery_temperature_sensor_tuple(topic_prefix: str, base_topic_pat
         json.dumps({
             "name": unique_name,
             "unique_id": unique_name,
-            "device_class": "sensor",
             "unit_of_measurement": "°C",
             "device_class": "temperature",
             "icon": "mdi:thermometer",
-            "state_topic": "{}/state".format(base_topic_path),
+            "state_topic": f"{base_topic_path}/state",
             "value_template": "{{ value_json." + sensor_name + "_temperature }}",
             "device": {
                 "model": device.get_model(),
