@@ -1,14 +1,19 @@
+"""
+Device class for handling the state of the device and the commands coming 
+from HomeAssistant / MQTT.
+"""
 from time import time
 import typing
 import logging
-import paho.mqtt.client as mqtt  # type: ignore
-import pcomfortcloud  # type: ignore
-from pcfmqtt.events import state_event
-import pcfmqtt.mappings as mappings
+import paho.mqtt.client as mqtt
+import pcomfortcloud
 from pcomfortcloud import constants
+import pcfmqtt.mappings as mappings
+from pcfmqtt.events import state_event
 
 
 class DeviceState:
+    """ State of a single device """
 
     def __init__(self, logger: logging.Logger, name: str, params: dict) -> None:
         self.name: str = name
@@ -49,8 +54,8 @@ class DeviceState:
 
     def refresh(self, state: "DeviceState"):
         """
-        Refresh the state from the given one. This is to update the current state from desired when device has been succesfully
-        update. 
+        Refresh the state from the given one. This is to update the current state from desired when 
+        device has been succesfully update. 
         """
         self.defaults = False
         self.temperature = self.log_if_updated(
@@ -62,7 +67,8 @@ class DeviceState:
         self.fan_speed = self.log_if_updated(
             self.fan_speed, state.fan_speed, self.name, "fan speed")
         self.air_swing_horizontal = self.log_if_updated(
-            self.air_swing_horizontal, state.air_swing_horizontal, self.name, "air swing horizontal")
+            self.air_swing_horizontal, state.air_swing_horizontal, self.name,
+            "air swing horizontal")
         self.air_swing_vertical = self.log_if_updated(
             self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
         self.eco = self.log_if_updated(self.eco, state.eco, self.name, "eco")
@@ -225,7 +231,7 @@ class Device:
                 "Mode command would not lead to action, skipping: %r", payload)
             return False
         else:
-            self._log.info("Unknown mode command: " + payload)
+            self._log.info("Unknown mode command: %r", payload)
             return False
 
     def _cmd_temp(self, session: pcomfortcloud.Session, payload: str) -> bool:
@@ -278,5 +284,5 @@ class Device:
         elif command in ["config", "state"]:
             return False
         else:
-            self._log.warn("Unknown command: %s", command)
+            self._log.warning("Unknown command: %s", command)
             return False

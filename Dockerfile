@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN pip3 install .
+RUN pip install .
 
 CMD [ "python3", "run.py" ]

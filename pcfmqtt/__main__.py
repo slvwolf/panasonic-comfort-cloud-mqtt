@@ -1,7 +1,8 @@
+""" Main entry point for the pcfmqtt package. """
 import argparse
 import os
-import pcfmqtt.service
 import logging
+import pcfmqtt.service
 
 logger_mapping = {
     "DEBUG": logging.DEBUG,
@@ -12,6 +13,7 @@ logger_mapping = {
 
 
 def main():
+    """ Where the magic happens """
     parser = argparse.ArgumentParser(
         description='Home-Assistant MQTT bridge for Panasonic Comfort Cloud')
     parser.add_argument('-u', '--username', type=str, default=os.environ.get('USERNAME'),
@@ -29,11 +31,11 @@ def main():
                         help="Logging level to use, defaults to INFO")
 
     args = parser.parse_args()
-    logging.root.setLevel(logger_mapping.get(args.log))
+    logging.root.setLevel(logger_mapping.get(args.log, logging.INFO))
     handler = logging.StreamHandler()
-    format = logging.Formatter(
+    logger_format = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(format)
+    handler.setFormatter(logger_format)
     logging.root.addHandler(handler)
 
     if not args.username or not args.password or not args.server or not args.port or not args.topic:

@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='panasonic-comfort-cloud-mqtt',
-      version='0.5.0',
+      version='0.5.1',
       description='Home-Assistant MQTT bridge for Panasonic Comfort Cloud ',
       long_description=long_description,
       long_description_content_type="text/markdown",
@@ -22,5 +22,5 @@ setup(name='panasonic-comfort-cloud-mqtt',
       ],
       packages=['pcfmqtt'],
       license='MIT',
-      install_requires=['pcomfortcloud>=0.0.22', 'paho-mqtt==1.6.1'],
+      install_requires=['pcomfortcloud>=0.1.0', 'paho-mqtt==1.6.1'],
       )
