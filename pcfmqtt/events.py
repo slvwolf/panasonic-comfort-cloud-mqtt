@@ -15,7 +15,9 @@ def discovery_topic(topic_prefix: str, component: str, device_id: str) -> str:
     return f"{topic_prefix}/{component}/{device_id}/config"
 
 
-def _create_discovery_temperature_sensor_tuple(topic_prefix: str, base_topic_path: str, sensor_name: str, device) -> typing.Tuple[str, str]:
+def _create_discovery_temperature_sensor_tuple(
+        topic_prefix: str, base_topic_path: str, sensor_name: str,
+        device) -> typing.Tuple[str, str]:
     """
     Creates tuple containing the topic and json payload to register new temperature sensor.
     """

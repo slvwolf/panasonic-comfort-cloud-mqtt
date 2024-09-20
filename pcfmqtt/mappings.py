@@ -1,4 +1,5 @@
-from pcomfortcloud import constants  # type: ignore
+""" Mapping of modes and power states between pcomfortcloud and pcfmqtt. """
+from pcomfortcloud import constants
 
 modes_to_literal = {
     "fan_only": constants.OperationMode.Fan,
