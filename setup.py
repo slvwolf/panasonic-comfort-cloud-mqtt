@@ -1,7 +1,7 @@
-#!/usr/bin/env python
-from distutils.core import setup
+""" Setup script for the package. """
+from setuptools import setup
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(name='panasonic-comfort-cloud-mqtt',
