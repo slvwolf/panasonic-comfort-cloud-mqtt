@@ -1,4 +1,4 @@
-pcomfortcloud>=0.1.0
+pcomfortcloud>=0.1.2
 paho-mqtt==1.6.1
 requests
 urllib3
