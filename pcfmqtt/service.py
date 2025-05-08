@@ -121,6 +121,7 @@ class Service:
                     if last_full_update + 60*60 < time.time():
                         self._send_discovery_events()
                         last_full_update = time.time()
+                        self._log.info("Full discovery cycle done for all devices")
                     time.sleep(1)
                     last_error = False
                 except Error as e:

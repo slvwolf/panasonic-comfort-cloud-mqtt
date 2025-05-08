@@ -36,10 +36,9 @@ class DeviceState:
             "nanoe", constants.NanoeMode.On)
         self.epoch: float = time()
 
-    def log_if_updated(self, current_value: typing.Any, new_value: typing.Any, device_name: str, value_name: str):
+    def log_if_updated(self, current_value: typing.Any, new_value: typing.Any, value_name: str):
         if current_value != new_value:
-            self._log.info("%s: Updated %s ( %r -> %r )",
-                           device_name, value_name, current_value, new_value)
+            self._log.info("Updated %s ( %r -> %r )", value_name, current_value, new_value)
         return new_value
 
     def refresh_all(self, state: "DeviceState"):
@@ -48,9 +47,9 @@ class DeviceState:
         """
         self.refresh(state)
         self.temperature_inside = self.log_if_updated(
-            self.temperature_inside, state.temperature_inside, self.name, "temperature inside")
+            self.temperature_inside, state.temperature_inside, "temperature inside")
         self.temperature_outside = self.log_if_updated(
-            self.temperature_outside, state.temperature_outside, self.name, "temperature outside")
+            self.temperature_outside, state.temperature_outside, "temperature outside")
 
     def refresh(self, state: "DeviceState"):
         """
@@ -59,21 +58,21 @@ class DeviceState:
         """
         self.defaults = False
         self.temperature = self.log_if_updated(
-            self.temperature, state.temperature, self.name, "temperature")
+            self.temperature, state.temperature, "temperature")
         self.power = self.log_if_updated(
-            self.power, state.power, self.name, "power")
+            self.power, state.power, "power")
         self.mode = self.log_if_updated(
-            self.mode, state.mode, self.name, "mode")
+            self.mode, state.mode, "mode")
         self.fan_speed = self.log_if_updated(
-            self.fan_speed, state.fan_speed, self.name, "fan speed")
+            self.fan_speed, state.fan_speed, "fan speed")
         self.air_swing_horizontal = self.log_if_updated(
-            self.air_swing_horizontal, state.air_swing_horizontal, self.name,
+            self.air_swing_horizontal, state.air_swing_horizontal,
             "air swing horizontal")
         self.air_swing_vertical = self.log_if_updated(
-            self.air_swing_vertical, state.air_swing_vertical, self.name, "air swing vertical")
-        self.eco = self.log_if_updated(self.eco, state.eco, self.name, "eco")
+            self.air_swing_vertical, state.air_swing_vertical, "air swing vertical")
+        self.eco = self.log_if_updated(self.eco, state.eco, "eco")
         self.nanoe = self.log_if_updated(
-            self.nanoe, state.nanoe, self.name, "nanoe")
+            self.nanoe, state.nanoe, "nanoe")
         self.epoch = time()
 
 
@@ -118,7 +117,7 @@ class Device:
             self._send_update(session)
             self._dirty = False
         if self._target_refresh < time():
-            self._log.info("Retrieving data")
+            self._log.debug("Retrieving data")
             data = session.get_device(self._id)
             if self._desired_state.defaults:
                 self._desired_state = DeviceState(
