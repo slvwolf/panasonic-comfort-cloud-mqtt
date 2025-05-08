@@ -2,20 +2,20 @@
 import time
 import typing
 import logging
-import pcomfortcloud
 import paho.mqtt.client as mqtt
+from pcomfortcloud.session import Session
+from pcomfortcloud.exceptions import Error
 from pcfmqtt.device import Device
 from pcfmqtt.events import discovery_event, state_event
 
-
 class Service:
-    """
+    """s
     Main service
     """
     def __init__(self, username: str, password: str, mqtt_addr: str,
                  mqtt_port: int, topic_prefix: str, update_interval: int = 60,
                  mqtt_wrapper: type[mqtt.Client] = mqtt.Client,
-                 session_wrapper: type[pcomfortcloud.Session] = pcomfortcloud.Session) -> None:
+                 session_wrapper: type[Session] = Session) -> None:
         self._topic_prefix = topic_prefix
         self._username = username
         self._password = password
@@ -27,7 +27,7 @@ class Service:
         self._wrapper_mqtt = mqtt_wrapper
         self._wrapper_session = session_wrapper
         self._client: mqtt.Client = mqtt_wrapper()
-        self._session: pcomfortcloud.Session = session_wrapper(self._username, self._password)
+        self._session: Session = session_wrapper(self._username, self._password)
 
     def connect_to_cc(self) -> bool:
         """
@@ -45,7 +45,7 @@ class Service:
                 # Refresh state after 30s so HA can pick it up
                 device.update_state(self._session, 30)
                 self._devices[device.get_id()] = device
-        except pcomfortcloud.exceptions.Error as e:
+        except Error as e:
             self._log.error(
                 "Failed initialization to Panasonic Comfort Cloud: %s. " +
                 "Will attempt again in 10 minutes.", e)
@@ -123,7 +123,7 @@ class Service:
                         last_full_update = time.time()
                     time.sleep(1)
                     last_error = False
-                except pcomfortcloud.exceptions.Error as e:
+                except Error as e:
                     self._log.exception("Error in Panasonic Comfort Cloud: %r", e)
                     self._sleep_on_last_error(last_error)
                     last_error = True
@@ -165,7 +165,7 @@ class Service:
         else:
             self._log.info("Unknown status from hass: %s", payload)
 
-    def on_message(self, client: mqtt.Client, _userdata, msg):
+    def on_message(self, client: mqtt.Client, _userdata: typing.Any, msg: mqtt.MQTTMessage):
         """ Handle incoming MQTT messages and relay it to devices """
         if msg.topic == "homeassistant/status":
             self._handle_hass_status(client, msg.payload.decode('utf-8'))

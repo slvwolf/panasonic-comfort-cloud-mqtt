@@ -6,7 +6,7 @@ from time import time
 import typing
 import logging
 import paho.mqtt.client as mqtt
-import pcomfortcloud
+from pcomfortcloud.session import Session
 from pcomfortcloud import constants
 import pcfmqtt.mappings as mappings
 from pcfmqtt.events import state_event
@@ -15,7 +15,7 @@ from pcfmqtt.events import state_event
 class DeviceState:
     """ State of a single device """
 
-    def __init__(self, logger: logging.Logger, name: str, params: dict) -> None:
+    def __init__(self, logger: logging.Logger, name: str, params: typing.Dict[str, typing.Any]) -> None:
         self.name: str = name
         self._log = logger
         self.defaults: bool = len(params) == 0
@@ -79,7 +79,8 @@ class DeviceState:
 
 class Device:
 
-    def __init__(self, topic_prefix: str, raw: dict) -> None:
+    def __init__(self, topic_prefix: str, raw: typing.Dict[str, typing.Any]) -> None:
+        self._dirty = False # True if there is some message that failed and needs to be resent
         self._name: str = raw["name"]
         self._topic_prefix: str = topic_prefix
         self._ha_name: str = "pcc_" + \
@@ -94,7 +95,7 @@ class Device:
             self._log, self.get_name(), {})
         self._log.info("New device: %s (%s)", self._name, self._ha_name)
 
-    def update_state(self, session: pcomfortcloud.Session, refresh_delay: float) -> bool:
+    def update_state(self, session: Session, refresh_delay: float) -> bool:
         """
         Update device state from the cloud, return true if something was done
 
@@ -112,15 +113,16 @@ class Device:
                 'nanoe': <NanoeMode.Off: 1>
             }
         """
+        # Push delayed updates
+        if self._dirty:
+            self._send_update(session)
+            self._dirty = False
         if self._target_refresh < time():
-            # If we have not initialized the device yet
-
             self._log.info("Retrieving data")
             data = session.get_device(self._id)
             if self._desired_state.defaults:
                 self._desired_state = DeviceState(
                     self._log, self.get_name(), data["parameters"])
-
             self._state.refresh_all(DeviceState(
                 self._log, self.get_name(), data["parameters"]))
             self._target_refresh = time() + refresh_delay
@@ -193,48 +195,60 @@ class Device:
         """
         self._target_refresh = time() + 5
 
-    def _send_update(self, session: pcomfortcloud.Session):
-        if session.set_device(self.get_internal_id(),
-                              mode=self._desired_state.mode,
-                              power=self._desired_state.power,
-                              temperature=self._desired_state.temperature,
-                              fanSpeed=self._desired_state.fan_speed,
-                              airSwingHorizontal=self._desired_state.air_swing_horizontal,
-                              airSwingVertical=self._desired_state.air_swing_vertical,
-                              eco=self._desired_state.eco):
-            self._state.refresh(self._desired_state)
+    def _send_update(self, session: Session):
+        try:
+            if session.set_device(self.get_internal_id(),
+                                mode=self._desired_state.mode,
+                                power=self._desired_state.power,
+                                temperature=self._desired_state.temperature,
+                                fanSpeed=self._desired_state.fan_speed,
+                                airSwingHorizontal=self._desired_state.air_swing_horizontal,
+                                airSwingVertical=self._desired_state.air_swing_vertical,
+                                eco=self._desired_state.eco):
+                self._state.refresh(self._desired_state)
+                self._refresh_soon()
+            else:
+                self._log.info("Device update failed")
+        except Exception as e:
+            # Occasionally the update fails with comfort cloud and needs to be retried at later time
+            self._log.exception("Error in device update: %r", e)
+            self._dirty = True
             self._refresh_soon()
-        else:
-            self._log.info("Device update failed")
 
-    def _cmd_mode(self, session: pcomfortcloud.Session, payload: str) -> bool:
+    def _cmd_mode(self, session: Session, payload: str) -> bool:
         """
         Set operating mode command
 
+        Sets the state according to the received payload (from HomeAssistant) and
+        apply the change to the device.
+
         Returns true if something changed and state update needs to be delivered
         """
-        literal = mappings.modes_to_literal.get(payload)
-        if literal:
-            self.set_mode(literal)
+        target_mode = mappings.modes_to_literal.get(payload)
+        target_power = mappings.power_to_literal.get(payload)
+        # Change device mode
+        if target_mode is not None:
+            self.set_mode(target_mode)
             self.set_power(constants.Power.On)
             self._send_update(session)
             self._log.info("Command ->  Mode set to %s", payload)
             return True
-        elif payload == "off":
+        # Change power state
+        if target_power is not None:
             # Don't turn off the device twice
-            if self.get_power() != literal:
-                self.set_power(constants.Power.Off)
+            if self.get_power() != target_power:
+                self.set_power(target_power)
                 self._send_update(session)
                 self._log.info("Command -> Mode set to %s", payload)
                 return True
             self._log.info(
                 "Mode command would not lead to action, skipping: %r", payload)
             return False
-        else:
-            self._log.info("Unknown mode command: %r", payload)
-            return False
+        # Unknown command
+        self._log.info("Unknown mode command: %r", payload)
+        return False
 
-    def _cmd_temp(self, session: pcomfortcloud.Session, payload: str) -> bool:
+    def _cmd_temp(self, session: Session, payload: str) -> bool:
         """
         Set target temperature command
 
@@ -250,7 +264,7 @@ class Device:
         self._log.info("Command ->  Temperature set to %r", payload)
         return True
 
-    def _cmd_power(self, session: pcomfortcloud.Session, payload: str) -> bool:
+    def _cmd_power(self, session: Session, payload: str) -> bool:
         """
         Set power on/off command
 
@@ -270,7 +284,7 @@ class Device:
             "Power command would not lead to action, skipping: %r", payload)
         return False
 
-    def command(self, client: mqtt.Client, session: pcomfortcloud.Session, command: str, payload: str) -> bool:
+    def command(self, client: mqtt.Client, session: Session, command: str, payload: str) -> bool:
         """
         Resolve command coming from HomeAssistant / MQTT. 
 
