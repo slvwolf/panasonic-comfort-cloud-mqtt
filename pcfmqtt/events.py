@@ -4,8 +4,6 @@ MQTT events.
 import json
 import typing
 
-from pcfmqtt.device import Device
-
 
 def discovery_topic(topic_prefix: str, component: str, device_id: str) -> str:
     """
@@ -19,7 +17,7 @@ def discovery_topic(topic_prefix: str, component: str, device_id: str) -> str:
 
 def _create_discovery_temperature_sensor_tuple(
         topic_prefix: str, base_topic_path: str, sensor_name: str,
-        device: Device) -> typing.Tuple[str, str]:
+        device) -> typing.Tuple[str, str]:
     """
     Creates tuple containing the topic and json payload to register new temperature sensor.
     """
@@ -42,10 +40,10 @@ def _create_discovery_temperature_sensor_tuple(
             }}))
 
 
-def discovery_event(topic_prefix: str, device: Device) -> typing.List[typing.Tuple[str, str]]:
+def discovery_event(topic_prefix: str, device) -> typing.List[typing.Tuple[str, str]]:
     """
     Create list of discovery events. Tuple consists of (discovery topic, event payload) 
-    """
+    """ 
     base_topic_path = "{}/{}/{}".format(topic_prefix,
                                         device.get_component(), device.get_id())
     topics = [
@@ -77,7 +75,7 @@ def discovery_event(topic_prefix: str, device: Device) -> typing.List[typing.Tup
     return topics
 
 
-def state_event(topic_prefix: str, device: Device) -> typing.Tuple[str, str]:
+def state_event(topic_prefix: str, device) -> typing.Tuple[str, str]:
     topic = "{}/{}/{}/state".format(topic_prefix,
                                     device.get_component(), device.get_id())
     payload = {
