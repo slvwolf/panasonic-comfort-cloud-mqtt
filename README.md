@@ -1,19 +1,29 @@
 # Panasonic Comfort Cloud MQTT Bridge
-Home-Assistant MQTT bridge for Panasonic Comfort Cloud. 
+Home-Assistant MQTT bridge for Panasonic Comfort Cloud. Supports automatic entity registration to Home Assistant and full control over the devices.
 
 _Note: Current version has been tested with model `CS-HZ25UKE`, let me know if noticing any problems with other models_
 
-![HA](/ha-dashboard.png "HA")
+![Controls](/docs/controls.png "Controls")
+
+Controls
+
+![Device](/docs/device.png "Device")
+
+Device
 
 Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
 
 ## Features
 - Auto registers entities to Home Assistant
-- Non-optimistic behaviour
-- AC operating mode controls 
+- Fan speed controls
+- AC operating modes 
 - Target temperature controls
+- Non-optimistic behaviour
 - Power controls for retaining preset modes
 - Inside and outside temperature sensors
+- Eco-mode controls
+- Swing settings (horizontal and vertical)
+- Device bundling
 - Respects HA birth and last will events
 
 ## Usage 
@@ -33,6 +43,9 @@ Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
     -s SERVER, --server SERVER
                             MQTT server address, default `localhost`. Environment variable: `MQTT`
     -p PORT, --port PORT  MQTT server port, default 1883. Environment variable `MQTT_PORT`
+    -i INTERVAL, --interval INTERVAL
+                            Device update interval in seconds, default 60. Not recommended to put value below 60
+                            as this might cause too many request error from the API. Environment variable `UPDATE_INTERVAL`
     -t TOPIC, --topic TOPIC
                             MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.
     -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log {DEBUG,INFO,WARNING,ERROR,CRITICAL}
@@ -59,6 +72,7 @@ Available env. variables,
 - PASSWORD
 - MQTT (default: localhost)
 - MQTT_PORT (default: 1883)
+- INTERVAL (default 60)
 - TOPIC_PREFIX (default: homeassistant)
 - LOG_LEVEL (default: info)
 
@@ -74,9 +88,9 @@ To access the logs run,
 
 ### Beyound 1.x
 
-- [ ] Fan mode support
-- [ ] Support for Eco mode
-- [ ] Support for Nano mode
-- [ ] Fan speed support
+- [X] Fan mode support
+- [X] Support for Eco mode
+- [X] Support for Nano mode
+- [X] Fan speed support
 - [ ] Service state events
 - [ ] Power usage metrics

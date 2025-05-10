@@ -27,7 +27,7 @@ def main():
     parser.add_argument('-p', '--port', type=int, default=os.environ.get('MQTT_PORT') or 1883,
                         help="MQTT server port, default 1883. Environment variable `MQTT_PORT`")
     parser.add_argument('-i', '--interval', type=int, default=os.environ.get('UPDATE_INTERVAL') or 60,
-                        help="Device update interval in seconds, default 60. Not recommended to put value belowe 60 " \
+                        help="Device update interval in seconds, default 60. Not recommended to put value below 60 " \
                         "as this might cause too many request error from the API. Environment variable `UPDATE_INTERVAL`.")
     parser.add_argument('-t', '--topic', type=str, default=os.environ.get('TOPIC_PREFIX') or "homeassistant",
                         help="MQTT discovery topic prefix, default `homeassistant`. Environment variable TOPIC_PREFIX.")
