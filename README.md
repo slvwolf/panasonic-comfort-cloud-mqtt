@@ -3,13 +3,7 @@ Home-Assistant MQTT bridge for Panasonic Comfort Cloud. Supports automatic entit
 
 _Note: Current version has been tested with model `CS-HZ25UKE`, let me know if noticing any problems with other models_
 
-![Controls](/docs/controls.png "Controls")
-
-Controls
-
-![Device](/docs/device.png "Device")
-
-Device
+![Controls](/docs/preview.png "Controls")
 
 Uses `pcomfortcloud` for Panasonic Comfort Cloud and `paho-mqtt` for MQTT.
 
